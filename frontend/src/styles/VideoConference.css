@@ -1,0 +1,415 @@
+/* VideoConference.css - Modern styling for video conferencing */
+
+:root {
+  --primary-color: #f58634;
+  --primary-dark: #e67423;
+  --secondary-color: #2c3e50;
+  --accent-color: #3498db;
+  --success-color: #2ecc71;
+  --danger-color: #e74c3c;
+  --warning-color: #f39c12;
+  --light-bg: #f8f9fa;
+  --dark-bg: #343a40;
+  --text-light: #f8f9fa;
+  --text-dark: #343a40;
+  --border-radius: 8px;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+}
+
+/* Video Conference Page Container */
+.video-conference-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
+  background-color: var(--light-bg);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* Interview Info Header */
+.interview-info {
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+  padding: 1.5rem;
+  border-bottom: 3px solid var(--primary-color);
+}
+
+.interview-info h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.interview-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.interview-details p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.interview-details strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.status-pending {
+  color: var(--warning-color);
+  font-weight: 600;
+}
+
+.status-accepted {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.status-completed {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.status-rejected, .status-cancelled {
+  color: var(--danger-color);
+  font-weight: 600;
+}
+
+/* Video Section */
+.video-section {
+  flex: 1;
+  padding: 1.5rem;
+  background-color: var(--light-bg);
+}
+
+/* Video Chat Container */
+.video-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 1.5rem;
+}
+
+/* Video Grid */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  height: 60vh;
+}
+
+@media (max-width: 992px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Video Box */
+.video-box {
+  position: relative;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background-color: var(--dark-bg);
+  box-shadow: var(--shadow);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: var(--dark-bg);
+}
+
+.video-box.local-video {
+  border: 2px solid var(--primary-color);
+}
+
+.video-box.remote-video {
+  border: 2px solid var(--accent-color);
+}
+
+.video-off {
+  opacity: 0.2;
+}
+
+/* Waiting Box Styles */
+.waiting-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(44, 62, 80, 0.9);
+  color: var(--text-light);
+}
+
+.waiting-message {
+  text-align: center;
+  padding: 2rem;
+  max-width: 80%;
+}
+
+.waiting-message h3 {
+  color: var(--text-light);
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.waiting-message p {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0;
+}
+
+.waiting-message .spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Name Tag */
+.name-tag {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: var(--text-light);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 10;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.25rem;
+  background-color: var(--secondary-color);
+  border-radius: var(--border-radius);
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.control-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--dark-bg);
+  color: var(--text-light);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 1.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.control-btn::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.control-btn:hover::after {
+  opacity: 1;
+}
+
+.control-btn:hover {
+  background-color: var(--accent-color);
+  transform: scale(1.1);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn.active {
+  background-color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.end-call-btn, .call-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 2rem;
+  border-radius: 32px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 1.1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  min-width: 150px;
+}
+
+.call-btn {
+  background-color: var(--success-color);
+  color: var(--text-light);
+}
+
+.call-btn:hover {
+  background-color: #27ae60;
+  transform: scale(1.05);
+}
+
+.end-call-btn {
+  background-color: var(--danger-color);
+  color: var(--text-light);
+}
+
+.end-call-btn:hover {
+  background-color: #c0392b;
+  transform: scale(1.05);
+}
+
+/* Incoming Call */
+.incoming-call {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--light-bg);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  text-align: center;
+  min-width: 300px;
+}
+
+.incoming-call h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--text-dark);
+}
+
+.incoming-call button {
+  margin: 0 0.5rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 25px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.incoming-call button:first-child {
+  background-color: var(--success-color);
+  color: var(--text-light);
+}
+
+.incoming-call button:last-child {
+  background-color: var(--danger-color);
+  color: var(--text-light);
+}
+
+/* Loading and Error Containers */
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-container .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-container .alert {
+  max-width: 600px;
+  margin-bottom: 1.5rem;
+}
+
+/* Feedback Section */
+.feedback-section {
+  padding: 1.5rem;
+  background-color: var(--light-bg);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.feedback-section h3 {
+  color: var(--secondary-color);
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.feedback-section .text-muted {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+/* Waiting Room */
+.waiting-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--light-bg);
+}
+
+.waiting-room h2 {
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+}
+
+.waiting-room p {
+  color: #6c757d;
+  max-width: 600px;
+  margin-bottom: 2rem;
+}
+
+.waiting-room .btn {
+  padding: 0.5rem 1.5rem;
+  border-radius: 25px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .interview-details {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .controls {
+    flex-wrap: wrap;
+  }
+  
+  .video-grid {
+    height: auto;
+  }
+  
+  .video-box {
+    height: 40vh;
+  }
+}

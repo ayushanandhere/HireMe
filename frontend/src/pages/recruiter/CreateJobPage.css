@@ -1,0 +1,286 @@
+/* Styles for CreateJobPage */
+
+.cjp-container.dashboard-container {
+  background-color: #fff5ee;
+  padding: 25px;
+  min-height: 100vh; /* Ensure it takes full height */
+}
+
+/* Page Header Styling */
+.cjp-container .dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  padding: 2.5rem 2rem;
+  background: linear-gradient(135deg, #1b024e, #7cbced);
+  border-radius: 15px;
+  color: #fff; 
+  box-shadow: 0 10px 20px rgba(255, 107, 53, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.cjp-container .dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+  transform: rotate(30deg);
+  pointer-events: none;
+}
+
+.cjp-container .dashboard-header .dashboard-title {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.cjp-container .dashboard-header .dashboard-title svg {
+  color: #ffffff !important; /* Ensure icon is white */
+  margin-right: 0.75rem;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+}
+
+.cjp-container .dashboard-header .btn-outline-primary {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.cjp-container .dashboard-header .btn-outline-primary:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Company Info Card */
+.cjp-company-card.card {
+  background: linear-gradient(135deg, #FFAA80, #FF8C42) !important;
+  color: #ffffff;
+  border-radius: 15px;
+  padding: 2rem; /* Increased padding */
+  margin-bottom: 2.5rem !important;
+  border: none;
+  box-shadow: 0 10px 25px rgba(255, 140, 66, 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.cjp-company-card.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(255, 140, 66, 0.3);
+}
+
+.cjp-company-card.card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cjp-company-card.card .card-body {
+  padding: 0.5rem; /* Reduce body padding if card has padding */
+  position: relative;
+  z-index: 1;
+}
+
+.cjp-company-card h4 {
+  color: #ffffff;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cjp-company-card p.text-muted {
+  color: rgba(255, 255, 255, 0.9) !important; /* Override Bootstrap's text-muted */
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.cjp-company-card svg {
+  font-size: 3rem !important; /* Larger icon */
+  color: #ffffff !important; /* White icon */
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.2));
+}
+
+/* Main Form Card */
+.cjp-form-card.dashboard-card {
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  padding: 2.5rem; /* Add padding to the card itself */
+  border: none;
+  background-color: #ffffff;
+  margin-bottom: 2rem;
+}
+
+.cjp-form-card.dashboard-card .card-body {
+  padding: 0; /* Remove default card-body padding if card has padding */
+}
+
+/* Form Elements */
+.cjp-form-card .form-label {
+  color: #663300; /* Dark brown text for labels */
+  font-weight: 600;
+  font-size: 1.1rem; /* Slightly larger for better readability */
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.cjp-form-card .form-label strong {
+  font-weight: 700; /* Bolder text */
+  color: #994D00; /* Darker orange for emphasis */
+}
+
+.cjp-form-card .form-label .text-primary {
+  color: #FF8C42 !important; /* Orange accent color for icons */
+  margin-right: 0.75rem;
+  font-size: 1.4rem;
+  filter: drop-shadow(0 1px 2px rgba(255, 107, 53, 0.2));
+}
+
+.cjp-form-card .form-control,
+.cjp-form-card .form-select {
+  border: 1px solid #FFD1B3;
+  background-color: #FFFAF5;
+  color: #663300;
+  padding: 0.9rem 1.2rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.cjp-form-card .form-control-lg,
+.cjp-form-card .form-select-lg {
+  padding: 1rem 1.2rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.cjp-form-card .form-control:focus,
+.cjp-form-card .form-select:focus {
+  border-color: #FF8C42;
+  box-shadow: 0 0 0 0.25rem rgba(255, 140, 66, 0.25);
+  background-color: #ffffff;
+}
+
+.cjp-form-card .form-control::placeholder {
+  color: #BF9270;
+  opacity: 0.7;
+}
+
+.cjp-form-card .form-text {
+  color: #994D00;
+  font-size: 0.9rem;
+  margin-top: 0.75rem;
+  font-weight: 500;
+}
+
+/* Form Actions */
+.cjp-form-actions {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #FFE0CC;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.cjp-submit-button {
+  padding: 0.9rem 2.5rem;
+  font-weight: 700;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #FF8C42, #FF6B35);
+  border-color: transparent;
+  box-shadow: 0 8px 15px rgba(255, 107, 53, 0.25);
+  transition: all 0.3s ease;
+  color: white;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+
+.cjp-submit-button:hover {
+  background: linear-gradient(135deg, #FF6B35, #FF5722);
+  border-color: transparent;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(255, 107, 53, 0.35);
+}
+
+.cjp-cancel-button.btn-secondary {
+  background-color: transparent;
+  border: 2px solid #FF8C42;
+  color: #FF6B35;
+  padding: 0.85rem 2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.cjp-cancel-button.btn-secondary:hover {
+  background-color: rgba(255, 140, 66, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(255, 107, 53, 0.15);
+}
+
+.cjp-submit-button.btn-primary:disabled {
+  background-color: #95a5a6 !important;
+  border-color: #95a5a6 !important;
+}
+
+.cjp-form-actions {
+  /* Parent div for buttons, d-flex justify-content-end is already on it */
+  gap: 1rem; /* Adds space between buttons if they wrap or for general spacing */
+}
+
+.cjp-cancel-button.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: #ffffff;
+  padding: 0.75rem 1.5rem; /* Consistent padding with submit */
+  font-size: 1.1rem; /* Consistent font size */
+  font-weight: 600; /* Consistent font weight */
+  border-radius: 6px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.cjp-cancel-button.btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+/* Ensure cjp-submit-button styles are not negatively impacted */
+/* (Styles for cjp-submit-button are already defined below this section) */
+
+/* Alert messages */
+.cjp-form-card .alert {
+  border-radius: 6px;
+  font-size: 0.95rem;
+}

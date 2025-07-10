@@ -1,0 +1,145 @@
+.feedback-card {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.feedback-card .card-header {
+  padding: 1rem 1.5rem;
+}
+
+.feedback-card .card-body {
+  padding: 1.5rem;
+}
+
+.feedback-card h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--bs-dark);
+}
+
+.feedback-card .text-warning {
+  color: #f59e0b !important;
+}
+
+.feedback-comment {
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  border-left: 3px solid #dee2e6;
+}
+
+.feedback-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.feedback-visibility-btn {
+  transition: all 0.2s ease;
+}
+
+.feedback-visibility-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Form styles */
+.form-select, .form-control {
+  background-color: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.form-select:focus, .form-control:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+}
+
+textarea.form-control {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.historical-feedback-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.historical-feedback-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  border-left: 4px solid #3b82f6;
+}
+
+.historical-feedback-item:last-child {
+  margin-bottom: 0;
+}
+
+.historical-feedback-item .candidate-name {
+  font-weight: 600;
+  color: var(--bs-dark);
+}
+
+.historical-feedback-item .position-title {
+  color: var(--bs-secondary);
+  font-size: 0.9rem;
+}
+
+.historical-feedback-item .feedback-date {
+  font-size: 0.85rem;
+  color: var(--bs-secondary);
+}
+
+.historical-feedback-item .rating-summary {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.historical-feedback-item .rating-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.historical-feedback-item .rating-label {
+  font-size: 0.85rem;
+  color: var(--bs-dark);
+}
+
+.feedback-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--bs-primary);
+  margin-bottom: 0.25rem;
+}
+
+.stat-card .stat-label {
+  font-size: 0.9rem;
+  color: var(--bs-secondary);
+} 

@@ -1,0 +1,184 @@
+/* Base Styles */
+#root {
+  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* App-specific variables - these override or supplement index.css variables */
+:root {
+  /* Header specific variables */
+  --header-gradient-start: #f97316;
+  --header-gradient-end: #ea580c;
+  --header-text: #ffffff;
+  --header-shadow: rgba(249, 115, 22, 0.2);
+  --header-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Only apply container styles to non-homepage routes */
+.container:not(.homepage-container) {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Theme showcase specific styles */
+.theme-showcase .card {
+  height: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.theme-showcase .card-title {
+  color: var(--accent-color);
+  border-bottom: 1px solid rgba(163, 247, 191, 0.2);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Animation for hover effects */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Hero section enhancements - only apply to non-homepage */
+.hero-section:not(.homepage-hero) {
+  padding: 3rem 0;
+  position: relative;
+  background: linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%);
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--border-radius-lg);
+}
+
+.hero-section:not(.homepage-hero):before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233b82f6' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+  border-radius: var(--border-radius-lg);
+}
+
+.features-section:not(.homepage-features) {
+  padding: 2rem 0;
+}
+
+/* Feature icon styling - only for non-homepage */
+.feature-icon:not(.homepage-feature-icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 1rem;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--primary-color);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  transition: var(--transition-standard);
+}
+
+.card:hover .feature-icon:not(.homepage-feature-icon) {
+  transform: scale(1.1);
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Override bootstrap container at different breakpoints */
+@media (min-width: 992px) {
+  .container:not(.homepage-container) {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container:not(.homepage-container) {
+    max-width: 1140px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section:not(.homepage-hero) {
+    padding: 2rem 0;
+    margin: 0 10px 1.5rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+}
+
+.form-control {
+  background-color: var(--gray-100);
+}

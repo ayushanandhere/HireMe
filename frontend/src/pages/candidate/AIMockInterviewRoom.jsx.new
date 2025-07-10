@@ -1,0 +1,472 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Button, Badge, ProgressBar, Accordion, Modal } from 'react-bootstrap';
+import { 
+  FaMicrophone, FaMicrophoneSlash, FaRobot, FaUser, FaCheckCircle, 
+  FaTimesCircle, FaExclamationTriangle, FaArrowLeft, FaFileAlt,
+  FaCheck, FaStar, FaExclamation, FaLightbulb, FaBriefcase, FaChartLine
+} from 'react-icons/fa';
+import './AIMockInterviewRoom.css';
+
+const AIMockInterviewRoom = () => {
+  // Keep all the existing code until the feedback section
+  const { applicationId } = useParams();
+  const navigate = useNavigate();
+  
+  // State variables
+  const [application, setApplication] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentQuestionText, setCurrentQuestionText] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [transcription, setTranscription] = useState('');
+  const [error, setError] = useState(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [interviewStage, setInterviewStage] = useState('intro');
+  const [interviewMode, setInterviewMode] = useState('technical');
+  const [interviewCompleted, setInterviewCompleted] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [answers, setAnswers] = useState([]);
+  const [completedQuestionsCount, setCompletedQuestionsCount] = useState(0);
+  const [requiredQuestionsCount, setRequiredQuestionsCount] = useState(5);
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Refs
+  const canvasRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const animationRef = useRef(null);
+  
+  // Your existing functions and useEffect hooks
+  
+  // Process the recorded audio
+  const processRecording = async (audioBlob) => {
+    try {
+      console.log('Processing recording with parameters:', {
+        applicationId,
+        currentQuestion,
+        interviewMode,
+        conversationHistoryLength: conversationHistory.length,
+        completedQuestionsCount,
+        requiredQuestionsCount
+      });
+      
+      // Check if we've already completed the required number of questions
+      if (completedQuestionsCount >= requiredQuestionsCount) {
+        console.log('Required questions already completed, skipping processing');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Create a form data object to send the audio file
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('applicationId', applicationId);
+      formData.append('questionIndex', String(currentQuestion)); // Convert to string explicitly
+      formData.append('interviewMode', interviewMode || 'technical'); // Provide default value
+      formData.append('currentQuestion', currentQuestionText);
+      formData.append('conversationHistory', JSON.stringify(conversationHistory));
+      formData.append('completedQuestionsCount', String(completedQuestionsCount)); // Current count of completed questions
+      formData.append('requiredQuestionsCount', String(requiredQuestionsCount)); // Total required questions
+      
+      // Log the form data (for debugging)
+      console.log('Form data entries:');
+      for (let pair of formData.entries()) {
+        if (pair[0] !== 'conversationHistory') { // Don't log the entire conversation history
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+      }
+      
+      // Send the audio to the server for processing
+      const response = await fetch('http://localhost:5000/api/ai/mock-interview/process-answer', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      
+      // Log the response status
+      console.log('Response status:', response.status);
+      
+      // Handle network errors
+      if (!response.ok) {
+        const errorType = response.status >= 500 ? 'server' : 'network';
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Response data:', data);
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to process answer');
+      }
+      
+      // Reset retry count on success
+      setRetryCount(0);
+      
+      // Get the response data
+      const {
+        transcript,
+        responseType,
+        aiResponse,
+        isComplete,
+        shouldMoveToNext,
+        feedback,
+        interviewCompleted
+      } = data.data;
+      
+      // Update transcription
+      setTranscription(transcript);
+      
+      // Add candidate's response to conversation history
+      const updatedHistory = [...conversationHistory, {
+        role: 'candidate',
+        text: transcript,
+        timestamp: new Date().toISOString()
+      }];
+      
+      // Add AI's response to conversation history
+      if (aiResponse && aiResponse.text) {
+        updatedHistory.push({
+          role: 'interviewer',
+          text: aiResponse.text,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      setConversationHistory(updatedHistory);
+      
+      // Always update answers for any response type
+      // This ensures we count every response as an answer
+      const newAnswers = [...answers];
+      newAnswers[currentQuestion] = {
+        question: currentQuestionText,
+        transcript: transcript,
+        feedback: feedback || ''
+      };
+      setAnswers(newAnswers);
+      
+      // Always increment the completed questions count for any answer
+      // This ensures we strictly follow the required question count
+      const newCompletedCount = completedQuestionsCount + 1;
+      setCompletedQuestionsCount(newCompletedCount);
+      
+      // Check if the interview is completed based on backend flag or question count
+      if (interviewCompleted || newCompletedCount >= requiredQuestionsCount) {
+        console.log('Interview completed based on question count or backend signal');
+        setInterviewCompleted(true);
+        
+        // Display a completion message
+        const completionMessage = "Thank you for completing the interview. I'll now generate your feedback based on your responses.";
+        
+        // Add the completion message to the conversation history
+        updatedHistory.push({
+          role: 'interviewer',
+          text: completionMessage,
+          timestamp: new Date().toISOString(),
+          isCompletionMessage: true
+        });
+        
+        setConversationHistory(updatedHistory);
+        
+        // Log the answers that will be sent to the backend
+        console.log('Final answers before feedback generation:', newAnswers);
+        
+        // Store the answers in localStorage as a backup
+        try {
+          localStorage.setItem('interviewAnswers', JSON.stringify(newAnswers));
+        } catch (err) {
+          console.error('Error saving answers to localStorage:', err);
+        }
+        
+        // Speak the completion message
+        setIsAiSpeaking(true);
+        await speakText(completionMessage);
+        setIsAiSpeaking(false);
+        
+        // Get the final feedback
+        getFinalFeedback();
+      } else {
+        // Handle AI response for continuing the interview
+        if (aiResponse) {
+          // Play the AI response audio
+          if (aiResponse.audioUrl) {
+            setIsAiSpeaking(true);
+            await playQuestionAudio(aiResponse.audioUrl);
+            setIsAiSpeaking(false);
+          } else if (aiResponse.text) {
+            setIsAiSpeaking(true);
+            await speakText(aiResponse.text);
+            setIsAiSpeaking(false);
+          }
+          
+          // Always move to the next question
+          if (aiResponse.nextQuestion) {
+            // Set the new question text
+            setCurrentQuestionText(aiResponse.nextQuestion);
+            
+            // Move to the next question index
+            if (currentQuestion < questions.length - 1) {
+              setCurrentQuestion(currentQuestion + 1);
+            }
+          } else {
+            // If no next question is provided, use a default one
+            // This should not happen with our updated backend logic
+            setCurrentQuestionText("Let's move to the next question. Tell me about...");
+            
+            // Move to the next question index
+            if (currentQuestion < questions.length - 1) {
+              setCurrentQuestion(currentQuestion + 1);
+            }
+          }
+        }
+        
+        // Continue the interview
+        setIsProcessing(false);
+      }
+      
+    } catch (error) {
+      console.error('Error processing recording:', error);
+      setError(error.message || 'Failed to process your answer. Please try again.');
+      setIsProcessing(false);
+      setShowErrorModal(true);
+    }
+  };
+  
+  // Get final feedback after all questions are answered
+  const getFinalFeedback = async () => {
+    try {
+      setIsProcessing(true);
+      
+      // Check if answers array is empty and try to retrieve from localStorage
+      let answersToSend = answers;
+      if (!answers || answers.length === 0) {
+        try {
+          const savedAnswers = localStorage.getItem('interviewAnswers');
+          if (savedAnswers) {
+            answersToSend = JSON.parse(savedAnswers);
+            console.log('Retrieved answers from localStorage:', answersToSend);
+          }
+        } catch (err) {
+          console.error('Error retrieving answers from localStorage:', err);
+        }
+      }
+      
+      // Filter out any empty answers
+      const validAnswers = answersToSend.filter(answer => answer && answer.transcript);
+      
+      console.log('Sending answers to backend for feedback generation:', validAnswers);
+      
+      // Check if we have any valid answers to send
+      if (!validAnswers || validAnswers.length === 0) {
+        throw new Error('No valid interview answers found. Please try again.');
+      }
+      
+      const response = await fetch('http://localhost:5000/api/ai/mock-interview/finalize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          applicationId,
+          answers: validAnswers
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to generate feedback');
+      }
+      
+      // Set the feedback data
+      setFeedback(data.data);
+      
+      // Update the interview stage to show feedback
+      setInterviewStage('feedback');
+      
+      // No longer processing
+      setIsProcessing(false);
+      
+    } catch (error) {
+      console.error('Error getting final feedback:', error);
+      setError(error.message || 'Failed to generate feedback. Please try again.');
+      setIsProcessing(false);
+      setShowErrorModal(true);
+    }
+  };
+  
+  // Rest of your component code
+  
+  return (
+    <div className="ai-mock-interview-room">
+      <div className="interview-container">
+        {/* Your existing code for the interview UI */}
+        
+        {/* Feedback Section - Completely rewritten to fix all lint errors */}
+        {interviewStage === 'feedback' && (
+          <div className="interview-feedback">
+            {isProcessing ? (
+              <div className="feedback-loading">
+                <div className="loading-spinner"></div>
+                <h3>Generating Your Interview Feedback</h3>
+                <p>Please wait while we analyze your responses and prepare comprehensive feedback...</p>
+              </div>
+            ) : feedback ? (
+              <div className="feedback-card">
+                <div className="feedback-header">
+                  <h2>Your Interview Feedback</h2>
+                  <p>Here's how you performed in your mock interview for {application?.job?.title}</p>
+                </div>
+                
+                <div className="score-section">
+                  <div className="score-display">
+                    <div className="score-circle">
+                      <span className="score-value">{feedback.score || 0}</span>
+                      <span className="score-max">/10</span>
+                    </div>
+                  </div>
+                  <div className="score-description">
+                    <h3>Overall Assessment</h3>
+                    <p>{feedback.overallAssessment || 'No assessment provided'}</p>
+                  </div>
+                </div>
+                
+                <Accordion defaultActiveKey="0" className="feedback-accordion">
+                  <Accordion.Item eventKey="0">
+                    <Accordion.Header>
+                      <FaStar className="me-2" /> Strengths
+                    </Accordion.Header>
+                    <Accordion.Body>
+                      {feedback.strengths && feedback.strengths.length > 0 ? (
+                        <ul className="strength-list">
+                          {feedback.strengths.map((strength, index) => (
+                            <li key={index} className="strength-item">
+                              <div className="strength-icon"><FaCheck /></div>
+                              <div className="strength-text">{strength}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No specific strengths highlighted</p>
+                      )}
+                    </Accordion.Body>
+                  </Accordion.Item>
+                  
+                  <Accordion.Item eventKey="1">
+                    <Accordion.Header>
+                      <FaExclamationTriangle className="me-2" /> Areas for Improvement
+                    </Accordion.Header>
+                    <Accordion.Body>
+                      {feedback.areasForImprovement && feedback.areasForImprovement.length > 0 ? (
+                        <ul className="improvement-list">
+                          {feedback.areasForImprovement.map((area, index) => (
+                            <li key={index} className="improvement-item">
+                              <div className="improvement-icon"><FaExclamation /></div>
+                              <div className="improvement-text">{area}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No specific areas for improvement highlighted</p>
+                      )}
+                    </Accordion.Body>
+                  </Accordion.Item>
+                  
+                  <Accordion.Item eventKey="2">
+                    <Accordion.Header>
+                      <FaLightbulb className="me-2" /> Recommendations
+                    </Accordion.Header>
+                    <Accordion.Body>
+                      {feedback.recommendations && feedback.recommendations.length > 0 ? (
+                        <ul className="recommendation-list">
+                          {feedback.recommendations.map((recommendation, index) => (
+                            <li key={index} className="recommendation-item">
+                              <div className="recommendation-icon"><FaBriefcase /></div>
+                              <div className="recommendation-text">{recommendation}</div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No specific recommendations provided</p>
+                      )}
+                    </Accordion.Body>
+                  </Accordion.Item>
+                </Accordion>
+                
+                <div className="interview-summary">
+                  <h3><FaFileAlt className="me-2" /> Interview Summary</h3>
+                  <div className="question-answer-list">
+                    {answers.length > 0 ? (
+                      answers.map((answer, index) => (
+                        <div key={index} className="qa-item">
+                          <div className="question">
+                            <div className="qa-icon interviewer"><FaRobot /></div>
+                            <div className="qa-text">{answer.question}</div>
+                          </div>
+                          <div className="answer">
+                            <div className="qa-icon candidate"><FaUser /></div>
+                            <div className="qa-text">
+                              {answer.transcript ? (
+                                answer.transcript
+                              ) : (
+                                <span className="text-muted">No response recorded</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-answers-message">
+                        <FaExclamationTriangle className="me-2" />
+                        <span>No interview responses recorded</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="feedback-actions">
+                  <Button 
+                    className="retry-btn feedback-btn"
+                    onClick={() => {
+                      setInterviewStage('intro');
+                      setCurrentQuestion(0);
+                      setQuestions([]);
+                      setAnswers([]);
+                      setFeedback(null);
+                      setTranscription('');
+                    }}
+                  >
+                    <FaMicrophone className="me-2" /> Try Again
+                  </Button>
+                  
+                  <Link to="/dashboard/candidate/applications" className="return-btn feedback-btn">
+                    <FaArrowLeft className="me-2" /> Return to Applications
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="no-feedback-message">
+                <FaExclamationTriangle className="me-2" />
+                <span>No feedback available. Please try the interview again.</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AIMockInterviewRoom;

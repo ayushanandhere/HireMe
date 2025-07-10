@@ -1,0 +1,52 @@
+/* Fix for input field visibility issues */
+
+/* Override any theme or conflicting styles for form inputs */
+.auth-container .form-control,
+.auth-card .form-control {
+  /* Force dark text on light background */
+  color: #000000 !important; 
+  background-color: #ffffff !important;
+  border: 1px solid #ced4da !important;
+  caret-color: #000000 !important; /* Ensure cursor is visible */
+}
+
+/* Apply these styles to all input types */
+.auth-container input,
+.auth-container select,
+.auth-container textarea,
+.auth-card input,
+.auth-card select,
+.auth-card textarea {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  caret-color: #000000 !important;
+}
+
+/* Style placeholder text */
+.auth-container .form-control::placeholder,
+.auth-card .form-control::placeholder {
+  color: #6c757d !important;
+  opacity: 0.7 !important;
+}
+
+/* Focus state */
+.auth-container .form-control:focus,
+.auth-card .form-control:focus {
+  border-color: #3498db !important;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25) !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Ensure visibility in the profile page as well */
+.dashboard-container .form-control {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  caret-color: #000000 !important;
+}
+
+/* Apply to buttons for better visibility */
+.btn-submit {
+  color: #ffffff !important;
+  background-color: #3498db !important;
+} 

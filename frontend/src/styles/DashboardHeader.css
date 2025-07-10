@@ -1,0 +1,79 @@
+/* DashboardHeader.css - Fixes for header appearance on candidate side */
+
+/* Fix for the dashboard button appearance */
+.navbar-dark .navbar-nav .nav-link[href*="/dashboard"] {
+  color: #663300 !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.3s ease !important;
+  position: relative !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+/* Fix for the dashboard button hover state */
+.navbar-dark .navbar-nav .nav-link[href*="/dashboard"]:hover,
+.navbar-dark .navbar-nav .nav-link[href*="/dashboard"]:focus {
+  color: var(--accent-color, #FF6B35) !important;
+  background-color: rgba(255, 107, 53, 0.08) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: none !important;
+}
+
+/* Ensure consistent styling between candidate and recruiter dashboard links */
+.navbar-dark .navbar-nav .nav-link[href="/dashboard/candidate"],
+.navbar-dark .navbar-nav .nav-link[href="/dashboard/recruiter"] {
+  display: flex !important;
+  align-items: center !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  color: #663300 !important;
+}
+
+/* Fix for the highlighted/active dashboard button */
+.navbar-dark .navbar-nav .nav-link[href*="/dashboard"].active {
+  background-color: transparent !important;
+  color: var(--accent-color, #FF6B35) !important;
+}
+
+/* Ensure no box shadow or border on dashboard button */
+.navbar-dark .navbar-nav .nav-item:has(.nav-link[href*="/dashboard"]) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Fix for the dashboard text in the header */
+.nav-link[href*="/dashboard"] .nav-icon + span {
+  color: inherit !important;
+}
+
+/* Fix for the Interviews button in the header */
+.navbar-dark .navbar-nav .nav-link[href*="/interviews"] {
+  color: #663300 !important;
+  font-weight: 500 !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+/* Fix for the Interviews button hover state */
+.navbar-dark .navbar-nav .nav-link[href*="/interviews"]:hover,
+.navbar-dark .navbar-nav .nav-link[href*="/interviews"]:focus {
+  color: var(--accent-color, #FF6B35) !important;
+  background-color: rgba(255, 107, 53, 0.08) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Make all nav links in the header consistent */
+.navbar-dark .navbar-nav .nav-link {
+  color: #663300 !important;
+}
+
+/* Ensure the nav icons have consistent color */
+.nav-icon {
+  color: #663300 !important;
+}

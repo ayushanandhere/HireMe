@@ -1,0 +1,226 @@
+/* Styles for ManageJobsPage */
+
+.mjp-container.dashboard-container {
+  background-color: #f4f7f9; /* Light grey background for the page */
+  padding: 25px;
+  min-height: 100vh;
+}
+
+/* Page Header Styling */
+.mjp-container .dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  padding: 2.5rem 2rem;
+  background-color: #34495e; /* Rich dark slate blue */
+  border-radius: 10px;
+  color: #bdc3c7; /* Default light text for secondary elements */
+}
+
+.mjp-container .dashboard-header .dashboard-title {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.mjp-container .dashboard-header .dashboard-title svg {
+  color: #ffffff !important;
+  margin-right: 0.75rem;
+}
+
+.mjp-back-button.btn-outline-primary {
+  color: #e0e0e0;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.mjp-back-button.btn-outline-primary:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.mjp-create-job-button.btn-primary {
+  background-color: #1abc9c !important; /* Accent color */
+  border-color: #1abc9c !important;
+  color: #ffffff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.mjp-create-job-button.btn-primary:hover {
+  background-color: #16a085 !important; /* Darker shade for hover/focus */
+  border-color: #16a085 !important;
+}
+
+/* Main Content Card (containing table or empty state) */
+.mjp-container .dashboard-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+  border: none;
+}
+
+/* Jobs Table Styling */
+.mjp-jobs-table {
+  border-collapse: separate;
+  border-spacing: 0 0.5rem; /* Spacing between rows */
+  margin-top: 1rem;
+}
+
+.mjp-jobs-table thead th {
+  background-color: #e9ecef; /* Light grey for table header */
+  color: #495057; /* Dark text for header */
+  border-bottom: 2px solid #dee2e6;
+  border-top: none;
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mjp-jobs-table tbody tr {
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px; /* Rounded rows */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.mjp-jobs-table tbody tr:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.mjp-jobs-table tbody td {
+  padding: 1rem 0.75rem;
+  vertical-align: middle;
+  border: none; /* Remove default borders, rely on row shadow */
+  color: #34495e; /* Dark text for table content */
+}
+
+.mjp-jobs-table tbody tr td:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.mjp-jobs-table tbody tr td:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* Action Buttons in Table */
+.mjp-action-button.btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  margin-right: 0.3rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mjp-action-button.btn svg {
+  margin-right: 0.3em; /* Space between icon and text if any */
+}
+
+.mjp-action-button.btn-outline-primary {
+  color: #1abc9c;
+  border-color: #1abc9c;
+}
+.mjp-action-button.btn-outline-primary:hover {
+  background-color: #1abc9c;
+  color: #fff;
+}
+
+.mjp-action-button.btn-outline-info {
+  color: #3498db;
+  border-color: #3498db;
+}
+.mjp-action-button.btn-outline-info:hover {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.mjp-action-button.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+}
+.mjp-action-button.btn-outline-secondary:hover {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.mjp-action-button.btn-outline-danger {
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+.mjp-action-button.btn-outline-danger:hover {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+/* Status Badges */
+.mjp-jobs-table .badge {
+  padding: 0.4em 0.7em;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Empty State Card */
+.mjp-empty-state-card {
+  background-color: #f8f9fa; /* Light background for empty state */
+  padding: 3rem !important;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.mjp-empty-state-card p {
+  color: #6c757d; /* Softer text color */
+  font-size: 1.1rem;
+}
+
+.mjp-empty-state-card .btn-primary {
+  background-color: #1abc9c !important;
+  border-color: #1abc9c !important;
+}
+
+.mjp-empty-state-card .btn-primary:hover {
+  background-color: #16a085 !important;
+  border-color: #16a085 !important;
+}
+
+/* Delete Confirmation Alert */
+.mjp-delete-alert.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+}
+
+.mjp-delete-alert .alert-heading {
+  color: inherit;
+}
+
+/* General Alert Styling (for error messages) */
+.mjp-container > .alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+}

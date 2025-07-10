@@ -1,0 +1,331 @@
+/* Candidate Interview Feedback Page Styling */
+
+:root {
+  --primary-color: #f58634;
+  --primary-light: #ff9d57;
+  --primary-dark: #e67423;
+  --secondary-color: #2c3e50;
+  --secondary-light: #3c536a;
+  --accent-color: #3498db;
+  --success-color: #2ecc71;
+  --danger-color: #e74c3c;
+  --warning-color: #f39c12;
+  --light-bg: #f8f9fa;
+  --dark-bg: #343a40;
+  --text-light: #f8f9fa;
+  --text-dark: #343a40;
+  --border-radius: 8px;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+}
+
+/* Page Container */
+.feedback-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Page Header */
+.feedback-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 3px solid var(--primary-color);
+}
+
+.feedback-page-header h1 {
+  color: var(--secondary-color);
+  font-weight: 700;
+  margin: 0;
+  font-size: 2.2rem;
+}
+
+.feedback-page-header .back-button {
+  display: flex;
+  align-items: center;
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 30px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.feedback-page-header .back-button:hover {
+  background-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+/* Interview Details Card */
+.interview-details-card {
+  background: linear-gradient(135deg, var(--secondary-color), var(--secondary-light));
+  color: var(--text-light);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.interview-details-card .card-body {
+  padding: 2rem;
+}
+
+.interview-details-card h4 {
+  color: var(--primary-light);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.interview-details-card .detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.interview-details-card .detail-item {
+  flex: 1;
+  min-width: 250px;
+  margin-bottom: 1rem;
+}
+
+.interview-details-card .detail-label {
+  color: var(--primary-light);
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.interview-details-card .detail-value {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Feedback Content */
+.feedback-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 992px) {
+  .feedback-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Feedback Score Card */
+.feedback-score-card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  height: 100%;
+}
+
+.feedback-score-card .card-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.feedback-score-card .card-body {
+  padding: 1.5rem;
+}
+
+/* Overall Score */
+.overall-score-container {
+  text-align: center;
+  margin: 1rem 0 2rem;
+}
+
+.overall-score-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.overall-score-value {
+  color: white;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.overall-score-label {
+  color: var(--secondary-color);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.star-rating {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.star-rating .filled {
+  color: var(--warning-color);
+}
+
+.star-rating .half {
+  color: var(--warning-color);
+}
+
+.star-rating .empty {
+  color: #ccc;
+}
+
+/* Skill Scores */
+.skill-score {
+  margin-bottom: 1.5rem;
+}
+
+.skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.skill-name {
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.skill-value {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skill-bar {
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.skill-progress {
+  height: 100%;
+  background: linear-gradient(to right, var(--primary-light), var(--primary-color));
+  border-radius: 4px;
+}
+
+.skill-comment {
+  background-color: #f8f9fa;
+  border-left: 3px solid var(--primary-color);
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  border-radius: 0 4px 4px 0;
+  font-style: italic;
+  color: var(--text-dark);
+}
+
+/* No Feedback Available */
+.no-feedback {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.no-feedback-icon {
+  font-size: 3rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.no-feedback-message {
+  font-size: 1.2rem;
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--primary-light);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spinner 1s linear infinite;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error State */
+.error-container {
+  background-color: #fff3f3;
+  border: 1px solid var(--danger-color);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.error-message {
+  color: var(--danger-color);
+  font-weight: 500;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .feedback-page-container {
+    padding: 1rem;
+  }
+  
+  .feedback-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .interview-details-card .detail-row {
+    flex-direction: column;
+  }
+  
+  .overall-score-circle {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .overall-score-value {
+    font-size: 2.5rem;
+  }
+}
