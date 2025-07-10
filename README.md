@@ -1,26 +1,6 @@
-# HireMe - Advanced Recruitment Platform
-
-![HireMe Platform](https://via.placeholder.com/800x400?text=HireMe+Platform)
+# HireMe - Smart Realtime Hiring Portal
 
 HireMe is a comprehensive full-stack web application built with the MERN stack (MongoDB, Express, React, Node.js) designed to streamline the recruitment process by connecting job seekers (candidates) and employers (recruiters). The platform offers a modern, intuitive interface with features like real-time video interviews, AI-powered mock interviews, application tracking, and more.
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Project Architecture](#project-architecture)
-- [Technology Stack](#technology-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-- [User Roles and Workflows](#user-roles-and-workflows)
-- [Core Features Explained](#core-features-explained)
-- [API Documentation](#api-documentation)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## 🌟 Overview
 
@@ -446,7 +426,7 @@ docker-compose up -d
 ```
 
 This command will:
-- Build the Docker images for frontend and backend
+- Build the Docker images for the frontend and backend
 - Start the MongoDB database
 - Connect all services via a Docker network
 - Map the necessary ports to your host machine
