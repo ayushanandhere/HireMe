@@ -64,12 +64,20 @@ The application uses environment variables for configuration. Default values are
 # Start all services (MongoDB, Backend, Frontend)
 docker compose up -d
 
+<<<<<<< HEAD
 # View logs (optional)
 docker compose logs -f
 
 # Check service status
 docker compose ps
 ```
+=======
+This command will:
+- Build the Docker images for the frontend and backend
+- Start the MongoDB database
+- Connect all services via a Docker network
+- Map the necessary ports to your host machine
+>>>>>>> 23d15b059b04ee85271eda025dc3dc49acf06c77
 
 ### 4. Access the Application
 - **Frontend**: http://localhost:3000
