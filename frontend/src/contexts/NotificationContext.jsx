@@ -24,7 +24,7 @@ export const NotificationProvider = ({ children }) => {
       }
 
       console.log('Fetching notifications from API...');
-      const apiUrl = 'http://localhost:5000/api/notifications';
+      const apiUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications`;
       console.log('API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
@@ -62,7 +62,7 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     console.log('Creating socket connection...');
     try {
-      const serverUrl = 'http://localhost:5000';
+      const serverUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
       console.log('Connecting to server:', serverUrl);
       
       // Retrieve auth token for socket authentication
@@ -173,7 +173,7 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${id}/read`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications/${id}/read`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`
@@ -203,7 +203,7 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/read-all`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications/read-all`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`
@@ -229,7 +229,7 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/notifications/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
