@@ -47,13 +47,29 @@ cd hireme
 
 ### 2. Configure Environment Variables
 
-The application uses environment variables for configuration. Default values are provided in the Docker setup, but you can customize them:
+**Important**: For AI features to work, you need to configure API keys:
+
+1. **Copy the environment template**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit `.env` file** and add your API keys:
+   ```bash
+   # Required for AI features
+   OPENAI_API_KEY=your_openai_api_key_here
+   HF_API_KEY=your_huggingface_api_key_here
+   ```
+
+3. **Get your API keys**:
+   - **OpenAI API Key**: https://platform.openai.com/api-keys
+   - **Hugging Face Token**: https://huggingface.co/settings/tokens
 
 **Backend Environment Variables** (configured in `docker-compose.yml`):
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - JWT signing secret
 - `OPENAI_API_KEY` - OpenAI API key for AI features
-- `FRONTEND_URL` - Frontend URL for CORS
+- `HF_API_KEY` - Hugging Face API key
 
 **Frontend Environment Variables** (configured in `frontend/.env`):
 - `VITE_BACKEND_URL` - Backend API URL
