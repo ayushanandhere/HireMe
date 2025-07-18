@@ -49,19 +49,19 @@ git clone https://github.com/yourusername/hireme.git
 cd hireme
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure Environment Variables (Optional)
 
-The application uses environment variables for configuration. Default values are provided in the Docker setup, but you can customize them:
+For AI features, you'll need API keys. Create a `.env` file in the root directory:
 
-**Backend Environment Variables** (configured in `docker-compose.yml`):
-- `MONGODB_URI` - MongoDB connection string
-- `JWT_SECRET` - JWT signing secret
-- `OPENAI_API_KEY` - OpenAI API key for AI features
-- `FRONTEND_URL` - Frontend URL for CORS
+```bash
+cp .env.example .env
+```
 
-**Frontend Environment Variables** (configured in `frontend/.env`):
-- `VITE_BACKEND_URL` - Backend API URL
-- `VITE_SOCKET_URL` - Socket.io server URL
+Then edit `.env` and add your API keys:
+- `OPENAI_API_KEY` - Required for AI mock interviews and resume parsing
+- `HF_API_KEY` - Optional for additional AI features
+
+**Note**: The application will run without these keys, but AI features will be disabled.
 
 ### 3. Start the Application
 ```bash
