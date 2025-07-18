@@ -1,94 +1,98 @@
 # HireMe - Smart Realtime Hiring Portal
 
-<<<<<<< HEAD
-> A comprehensive MERN stack recruitment platform connecting job seekers and employers with AI-powered features.
-=======
-HireMe is a comprehensive full-stack web application built with the MERN stack (MongoDB, Express, React, Node.js) designed to streamline the recruitment process by connecting job seekers (candidates) and employers (recruiters). The platform offers a modern, intuitive interface with features like real-time video interviews, AI-powered mock interviews, application tracking, and more.
->>>>>>> 23d15b059b04ee85271eda025dc3dc49acf06c77
+<div align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI" />
+</div>
+
+<div align="center">
+  <h3>🚀 A comprehensive MERN stack recruitment platform connecting job seekers and employers with AI-powered features</h3>
+</div>
+
+---
 
 ## 🌟 Overview
 
-HireMe is a modern recruitment platform that streamlines the hiring process for both candidates and recruiters. Built with the MERN stack (MongoDB, Express.js, React, Node.js), it features real-time video interviews, AI-powered mock interviews, intelligent job matching, and comprehensive application tracking.
+HireMe is a modern, full-stack recruitment platform that revolutionizes the hiring process for both candidates and recruiters. Built with the MERN stack (MongoDB, Express.js, React, Node.js), it features real-time video interviews, AI-powered mock interviews, intelligent job matching, and comprehensive application tracking.
 
-## 🚀 Key Features
+## ✨ Key Features
 
-### For Candidates
-- **Job Discovery & Application** - Browse and apply to jobs with intelligent matching
-- **AI Mock Interviews** - Practice with AI interviewer and receive feedback
-- **Real-time Video Interviews** - Participate in WebRTC-based video interviews
-- **Application Tracking** - Monitor application status with real-time updates
-- **Resume Analysis** - Get ATS compatibility scores and improvement suggestions
+### 👨‍💼 For Candidates
+- 🔍 **Smart Job Discovery** - Browse and apply to jobs with AI-powered matching
+- 🤖 **AI Mock Interviews** - Practice with intelligent AI interviewer and receive detailed feedback
+- 📹 **Real-time Video Interviews** - Participate in seamless WebRTC-based video interviews
+- 📊 **Application Tracking** - Monitor application status with real-time updates and notifications
+- 📄 **Resume Analysis** - Get ATS compatibility scores and AI-generated improvement suggestions
 
-### For Recruiters
-- **Job Management** - Create and manage job postings with advanced filtering
-- **Candidate Discovery** - Browse registered candidates with AI-powered matching
-- **Interview Scheduling** - Schedule and conduct video interviews
-- **Application Pipeline** - Track applications through the hiring process
-- **Analytics Dashboard** - Access recruitment metrics and insights
+### 👩‍💻 For Recruiters
+- 💼 **Job Management** - Create and manage job postings with advanced filtering and analytics
+- 🎯 **Candidate Discovery** - Browse registered candidates with AI-powered matching algorithms
+- 📅 **Interview Scheduling** - Schedule and conduct video interviews with integrated calendar
+- 🔄 **Application Pipeline** - Track applications through customizable hiring stages
+- 📈 **Analytics Dashboard** - Access comprehensive recruitment metrics and insights
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 19, Vite, Bootstrap, Socket.io-client
-- **Backend**: Node.js, Express.js, Socket.io, JWT Authentication
-- **Database**: MongoDB with Mongoose ODM
-- **AI Integration**: OpenAI GPT-4 for resume parsing and mock interviews
-- **Real-time**: WebRTC for video calls, Socket.io for notifications
-- **Deployment**: Docker & Docker Compose
+| Category | Technologies |
+|----------|-------------|
+| **Frontend** | React 19, Vite, Bootstrap, Socket.io-client, React Router |
+| **Backend** | Node.js, Express.js, Socket.io, JWT Authentication |
+| **Database** | MongoDB with Mongoose ODM |
+| **AI Integration** | OpenAI GPT-4 for resume parsing and mock interviews |
+| **Real-time** | WebRTC for video calls, Socket.io for notifications |
+| **Deployment** | Docker & Docker Compose |
 
 ## 📋 Prerequisites
 
-- **Docker** and **Docker Compose** installed on your system
-- **Git** for cloning the repository
-- **OpenAI API Key** for AI features (optional but recommended)
+- 🐳 **Docker** and **Docker Compose** installed on your system
+- 📦 **Git** for cloning the repository
+- 🔑 **OpenAI API Key** for AI features (optional but recommended)
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/yourusername/hireme.git
-cd hireme
+git clone https://github.com/ayushanandhere/HireMe.git
+cd HireMe
 ```
 
-### 2. Configure Environment Variables (Optional)
+### 2️⃣ Configure Environment Variables (Optional)
 
-For AI features, you'll need API keys. Create a `.env` file in the root directory:
+For AI features, create a `.env` file in the root directory:
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env` and add your API keys:
-- `OPENAI_API_KEY` - Required for AI mock interviews and resume parsing
-- `HF_API_KEY` - Optional for additional AI features
+Edit `.env` and add your API keys:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+HF_API_KEY=your_huggingface_api_key_here
+```
 
-**Note**: The application will run without these keys, but AI features will be disabled.
+> **Note**: The application will run without these keys, but AI features will be disabled.
 
-### 3. Start the Application
+### 3️⃣ Start the Application
 ```bash
 # Start all services (MongoDB, Backend, Frontend)
 docker compose up -d
 
-<<<<<<< HEAD
 # View logs (optional)
 docker compose logs -f
 
 # Check service status
 docker compose ps
 ```
-=======
-This command will:
-- Build the Docker images for the frontend and backend
-- Start the MongoDB database
-- Connect all services via a Docker network
-- Map the necessary ports to your host machine
->>>>>>> 23d15b059b04ee85271eda025dc3dc49acf06c77
 
-### 4. Access the Application
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5001
-- **MongoDB**: localhost:27017
+### 4️⃣ Access the Application
+- 🌐 **Frontend**: http://localhost:3000
+- 🔧 **Backend API**: http://localhost:5001
+- 🗄️ **MongoDB**: localhost:27017
 
-### 5. Stop the Application
+### 5️⃣ Stop the Application
 ```bash
 docker compose down
 ```
@@ -96,14 +100,19 @@ docker compose down
 ## 🔧 Development
 
 ### Local Development (Alternative to Docker)
-If you prefer to run the application locally without Docker:
+If you prefer to run locally without Docker:
 
-1. **Prerequisites**: Node.js 18+, MongoDB, npm/yarn
-2. **Backend**: `cd backend && npm install && npm run dev`
-3. **Frontend**: `cd frontend && npm install && npm run dev`
-4. **Database**: Ensure MongoDB is running locally or use MongoDB Atlas
+```bash
+# Prerequisites: Node.js 18+, MongoDB, npm/yarn
 
-### Docker Commands
+# Backend
+cd backend && npm install && npm run dev
+
+# Frontend (in another terminal)
+cd frontend && npm install && npm run dev
+```
+
+### Useful Docker Commands
 ```bash
 # View service status
 docker compose ps
@@ -124,13 +133,13 @@ docker compose down -v
 ## 🚀 Production Deployment
 
 ### Environment Variables
-Ensure these are configured for production:
+Configure these for production:
 - `MONGODB_URI` - Production MongoDB connection string
 - `JWT_SECRET` - Strong JWT signing secret
 - `OPENAI_API_KEY` - OpenAI API key for AI features
 - `NODE_ENV=production`
 
-### Build for Production
+### Build Commands
 ```bash
 # Build frontend
 cd frontend && npm run build
@@ -139,4 +148,30 @@ cd frontend && npm run build
 cd backend && npm install --production
 ```
 
-**Built with ❤️ by Ayush Anand**
+## 📸 Screenshots
+
+<div align="center">
+  <img src="https://via.placeholder.com/800x400/4A90E2/FFFFFF?text=HireMe+Dashboard" alt="HireMe Dashboard" width="45%" />
+  <img src="https://via.placeholder.com/800x400/50C878/FFFFFF?text=AI+Mock+Interview" alt="AI Mock Interview" width="45%" />
+</div>
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+  <p><strong>Built with ❤️ by <a href="https://github.com/ayushanandhere">Ayush Anand</a></strong></p>
+  <p>⭐ Star this repository if you found it helpful!</p>
+</div>
