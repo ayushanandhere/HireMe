@@ -39,7 +39,7 @@ const VideoChat = ({ interviewId, userType, userName }) => {
     console.log('Connecting to socket server with token:', token.substring(0, 10) + '...');
     
     // Connect to the socket server with auth
-    socketRef.current = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000', {
+    socketRef.current = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001', {
       auth: { token },
       reconnectionAttempts: 5,
       reconnectionDelay: 1000

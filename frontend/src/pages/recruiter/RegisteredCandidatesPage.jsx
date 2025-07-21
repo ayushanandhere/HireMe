@@ -53,14 +53,16 @@ const RegisteredCandidatesPage = () => {
   const getResumeDownloadUrl = (candidateId) => {
     if (!candidateId) return null;
     const token = localStorage.getItem('token');
-    return `http://localhost:5000/api/candidates/resume/download/${candidateId}?token=${token}`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    return `${backendUrl}/api/candidates/resume/download/${candidateId}?token=${token}`;
   };
 
   // Function to format resume view URL
   const getResumeViewUrl = (candidateId) => {
     if (!candidateId) return null;
     const token = localStorage.getItem('token');
-    return `http://localhost:5000/api/candidates/resume/view/${candidateId}?token=${token}`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    return `${backendUrl}/api/candidates/resume/view/${candidateId}?token=${token}`;
   };
 
   if (loading) {
@@ -133,83 +135,75 @@ const RegisteredCandidatesPage = () => {
             <p>{searchTerm ? 'No candidates match your search criteria.' : 'No candidates available at the moment.'}</p>
           </div>
         ) : (
-          <div className="candidates-grid">
-            {filteredCandidates.map((candidate, index) => (
-              <div key={candidate._id} className="candidate-card" style={{'--animation-order': index % 5}}>
-                <div className="candidate-header">
-                  <div className="candidate-avatar">
-                    {candidate.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="candidate-info">
-                    <h3 className="candidate-name">{candidate.name}</h3>
-                    <p className="candidate-email">
-                      <FaEnvelope className="email-icon" />
-                      {candidate.email}
-                    </p>
-                    {candidate.hasResume && <span className="has-resume-badge">Resume Available</span>}
-                  </div>
-                </div>
-                
-                <div className="candidate-details">
-                  <div className="detail-item">
-                    <span className="detail-label"><FaCode className="detail-icon" /> Skills:</span>
-                    <span className="detail-value">
-                      {candidate.skills ? (
-                        <div className="skills-container">
-                          {candidate.skills.split(',').map((skill, i) => (
-                            <span key={i} className="skill-tag">{skill.trim()}</span>
-                          ))}
+          <div className="candidates-table-container">
+            <div className="candidates-table">
+              {Array.from({ length: Math.ceil(filteredCandidates.length / 4) }, (_, rowIndex) => (
+                <div key={rowIndex} className="candidates-row">
+                  {filteredCandidates.slice(rowIndex * 4, (rowIndex + 1) * 4).map((candidate, colIndex) => (
+                    <div key={candidate._id} className="candidate-card-compact" style={{'--animation-order': (rowIndex * 4 + colIndex) % 8}}>
+                      <div className="candidate-header-compact">
+                        <div className="candidate-avatar-compact">
+                          {candidate.name.charAt(0).toUpperCase()}
                         </div>
-                      ) : 'Not specified'}
-                    </span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label"><FaBriefcase className="detail-icon" /> Experience:</span>
-                    <span className="detail-value">{candidate.experience || 'Not specified'}</span>
-                  </div>
-                  {candidate.education && (
-                    <div className="detail-item">
-                      <span className="detail-label"><FaGraduationCap className="detail-icon" /> Education:</span>
-                      <span className="detail-value">{candidate.education}</span>
+                        <div className="candidate-basic-info">
+                          <h4 className="candidate-name-compact">{candidate.name}</h4>
+                          <p className="candidate-email-compact">
+                            <FaEnvelope className="email-icon-compact" />
+                            {candidate.email}
+                          </p>
+                          <div className="candidate-experience-compact">
+                            <FaBriefcase className="experience-icon" />
+                            <span>{candidate.experience ? `${candidate.experience} years` : 'Experience not specified'}</span>
+                          </div>
+                          {candidate.hasResume && <span className="has-resume-badge-compact">Resume Available</span>}
+                        </div>
+                      </div>
+                      
+                      <div className="candidate-actions-compact">
+                        <Link 
+                          to={`/dashboard/recruiter/candidates/${candidate._id}`}
+                          className="action-button-compact analysis-btn-compact"
+                          title="View Analysis"
+                        >
+                          <FaChartBar />
+                        </Link>
+                        
+                        {candidate.hasResume ? (
+                          <>
+                            <a 
+                              href={getResumeViewUrl(candidate._id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="action-button-compact view-btn-compact"
+                              title="View Resume"
+                            >
+                              <FaEye />
+                            </a>
+                            <a 
+                              href={getResumeDownloadUrl(candidate._id)}
+                              className="action-button-compact download-btn-compact"
+                              title="Download Resume"
+                              download
+                            >
+                              <FaDownload />
+                            </a>
+                          </>
+                        ) : (
+                          <span className="no-resume-compact"><FaUserTie /> No Resume</span>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  ))}
+                  {/* Fill empty cells if last row has less than 4 candidates */}
+                  {rowIndex === Math.ceil(filteredCandidates.length / 4) - 1 && 
+                   filteredCandidates.length % 4 !== 0 && 
+                   Array.from({ length: 4 - (filteredCandidates.length % 4) }, (_, emptyIndex) => (
+                     <div key={`empty-${emptyIndex}`} className="candidate-card-empty"></div>
+                   ))
+                  }
                 </div>
-                
-                <div className="candidate-actions">
-                  <Link 
-                    to={`/dashboard/recruiter/candidates/${candidate._id}`}
-                    className="action-button analysis-btn"
-                    title="View Analysis"
-                  >
-                    <FaChartBar /> Analysis
-                  </Link>
-                  
-                  {candidate.hasResume ? (
-                    <>
-                      <a 
-                        href={getResumeViewUrl(candidate._id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="action-button view-btn"
-                        title="View Resume"
-                      >
-                        <FaEye /> View
-                      </a>
-                      <a 
-                        href={getResumeDownloadUrl(candidate._id)}
-                        className="action-button download-btn"
-                        title="Download Resume"
-                        download
-                      >
-                        <FaDownload /> Download
-                      </a>
-                    </>
-                  ) : (
-                    <span className="no-resume"><FaUserTie /> No Resume</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>

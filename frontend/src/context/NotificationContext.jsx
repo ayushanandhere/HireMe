@@ -11,7 +11,7 @@ export const NotificationProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   // API base URL (should match your backend)
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
   // Function to fetch notifications from the server
   const fetchNotifications = useCallback(async () => {

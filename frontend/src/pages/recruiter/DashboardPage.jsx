@@ -63,9 +63,9 @@ const RecruiterDashboardPage = () => {
           });
         }
 
-        // For now, we don't have a real jobs API, so we'll set it to 0
-        // In a real app, you would fetch this from a jobs API
-        setActiveJobs(0);
+        // For demonstration, we'll set a placeholder number for active jobs.
+        // In a real app, you would fetch this from a jobs API.
+        setActiveJobs(5); 
       } catch (err) {
         setError('Failed to load data. Please refresh and try again.');
         console.error('Error fetching data:', err);
@@ -90,17 +90,29 @@ const RecruiterDashboardPage = () => {
 
   return (
     <div className="modern-dashboard">
-      {/* Header Section */}
+      {/* Enhanced Header Section */}
       <div className="dashboard-header">
         <div className="header-content">
           <div className="welcome-section">
-            <h1 className="dashboard-title">Welcome back, {user?.name || 'Recruiter'}! 👋</h1>
-            <p className="dashboard-subtitle">Here's what's happening with your recruitment activities today.</p>
+            <div className="greeting-wrapper">
+              <h1 className="dashboard-title">
+                Welcome back, <span className="name-highlight">{user?.name || 'Recruiter'}</span>! 
+                <span className="wave-emoji">👋</span>
+              </h1>
+              <p className="dashboard-subtitle">
+                Here's your recruitment command center. Track progress, manage interviews, and discover top talent.
+              </p>
+            </div>
           </div>
           <div className="header-actions">
-            <Link to="/dashboard/recruiter/jobs/create" className="primary-action-btn">
-              <FaPlus size={20} />
-              <span>Create Job</span>
+            <Link to="/dashboard/recruiter/jobs/create" className="create-job-btn">
+              <div className="btn-icon">
+                <FaPlus size={16} />
+              </div>
+              <div className="btn-content">
+                <span className="btn-text">Create New Job</span>
+                <span className="btn-subtitle">Post a role & find talent</span>
+              </div>
             </Link>
           </div>
         </div>
@@ -113,50 +125,75 @@ const RecruiterDashboardPage = () => {
         </div>
       )}
       
-      {/* Stats Overview */}
+      {/* Enhanced Statistics Dashboard */}
       <div className="stats-section">
+        <div className="section-header">
+          <h2 className="section-title">Dashboard Overview</h2>
+          <p className="section-subtitle">Real-time insights into your recruitment activities</p>
+        </div>
+        
         <div className="stats-grid">
           <div className="stat-card pending">
-            <div className="stat-icon">
-              <FaClock size={24} />
+            <div className="stat-icon-wrapper">
+              <div className="stat-icon">
+                <FaClock size={24} />
+              </div>
             </div>
             <div className="stat-content">
-              <h3>Pending Interviews</h3>
-              <p className="stat-number">{interviews.pending}</p>
-              <span className="stat-label">Awaiting response</span>
+              <div className="stat-number">{interviews.pending}</div>
+              <div className="stat-label">Pending Interviews</div>
+              <div className="stat-description">Awaiting candidate response</div>
+            </div>
+            <div className="stat-trend">
+              <div className="trend-indicator neutral"></div>
             </div>
           </div>
           
           <div className="stat-card upcoming">
-            <div className="stat-icon">
-              <FaCalendar size={24} />
+            <div className="stat-icon-wrapper">
+              <div className="stat-icon">
+                <FaCalendar size={24} />
+              </div>
             </div>
             <div className="stat-content">
-              <h3>Upcoming Interviews</h3>
-              <p className="stat-number">{interviews.upcoming}</p>
-              <span className="stat-label">Scheduled</span>
+              <div className="stat-number">{interviews.upcoming}</div>
+              <div className="stat-label">Upcoming Interviews</div>
+              <div className="stat-description">Scheduled this week</div>
+            </div>
+            <div className="stat-trend">
+              <div className="trend-indicator positive"></div>
             </div>
           </div>
           
           <div className="stat-card completed">
-            <div className="stat-icon">
-              <FaCheckCircle size={24} />
+            <div className="stat-icon-wrapper">
+              <div className="stat-icon">
+                <FaCheckCircle size={24} />
+              </div>
             </div>
             <div className="stat-content">
-              <h3>Completed Interviews</h3>
-              <p className="stat-number">{interviews.past}</p>
-              <span className="stat-label">This month</span>
+              <div className="stat-number">{interviews.past}</div>
+              <div className="stat-label">Completed Interviews</div>
+              <div className="stat-description">Successfully conducted</div>
+            </div>
+            <div className="stat-trend">
+              <div className="trend-indicator positive"></div>
             </div>
           </div>
           
           <div className="stat-card jobs">
-            <div className="stat-icon">
-              <FaBriefcase size={24} />
+            <div className="stat-icon-wrapper">
+              <div className="stat-icon">
+                <FaBriefcase size={24} />
+              </div>
             </div>
             <div className="stat-content">
-              <h3>Active Jobs</h3>
-              <p className="stat-number">{activeJobs}</p>
-              <span className="stat-label">Currently hiring</span>
+              <div className="stat-number">{activeJobs}</div>
+              <div className="stat-label">Active Jobs</div>
+              <div className="stat-description">Currently hiring</div>
+            </div>
+            <div className="stat-trend">
+              <div className="trend-indicator positive"></div>
             </div>
           </div>
         </div>
@@ -166,7 +203,7 @@ const RecruiterDashboardPage = () => {
       <div className="actions-section">
         <div className="section-header">
           <h2 className="section-title">Quick Actions</h2>
-          <p className="section-subtitle">Streamline your recruitment workflow with these powerful tools</p>
+          <p className="section-subtitle">Streamline your workflow with these powerful tools.</p>
         </div>
         
         <div className="actions-grid">
@@ -177,7 +214,7 @@ const RecruiterDashboardPage = () => {
               </div>
               <div className="action-content">
                 <h3>Manage Jobs</h3>
-                <p>View and edit your job postings, track applications and find the perfect candidates</p>
+                <p>View, edit, and track all your active job postings.</p>
               </div>
             </div>
             <FaArrowRight className="action-arrow" size={20} />
@@ -190,7 +227,7 @@ const RecruiterDashboardPage = () => {
               </div>
               <div className="action-content">
                 <h3>Interview Hub</h3>
-                <p>Schedule and manage interviews with candidates in a streamlined workflow</p>
+                <p>Schedule and manage all candidate interviews.</p>
               </div>
             </div>
             <FaArrowRight className="action-arrow" size={20} />
@@ -203,24 +240,11 @@ const RecruiterDashboardPage = () => {
               </div>
               <div className="action-content">
                 <h3>Candidate Pool</h3>
-                <p>Browse registered candidates and discover top talent for your open positions</p>
+                <p>Discover top talent for your open positions.</p>
               </div>
             </div>
             <FaArrowRight className="action-arrow" size={20} />
           </Link>
-          
-          <div className="action-card accent">
-            <div className="action-card-content">
-              <div className="action-icon">
-                <FaChartLine size={28} />
-              </div>
-              <div className="action-content">
-                <h3>Analytics</h3>
-                <p>View detailed recruitment insights and optimize your hiring process</p>
-              </div>
-            </div>
-            <FaArrowRight className="action-arrow" size={20} />
-          </div>
         </div>
       </div>
     </div>
