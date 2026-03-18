@@ -12,11 +12,13 @@ const {
   acceptForInterview,
   rejectApplication,
   getResumeAnalysis,
-  getApplicationById
+  getApplicationById,
+  viewApplicationResume,
+  downloadApplicationResume
 } = require('../controllers/applicationController');
 
-// Create application - accessible to candidates and recruiters
-router.post('/', protect, upload.single('resume'), createApplication);
+// Create application - candidate only
+router.post('/', protect, candidateOnly, upload.single('resume'), createApplication);
 
 // Update application stage - recruiter only
 router.put('/:id/stage', protect, recruiterOnly, updateApplicationStage);
@@ -24,8 +26,8 @@ router.put('/:id/stage', protect, recruiterOnly, updateApplicationStage);
 // Get job applications - recruiter only
 router.get('/job/:jobId', protect, recruiterOnly, getJobApplications);
 
-// Get candidate applications - accessible to the candidate and recruiters
-router.get('/candidate/:candidateId', protect, getCandidateApplications);
+// Get candidate applications - candidate only
+router.get('/candidate/:candidateId', protect, candidateOnly, getCandidateApplications);
 
 // Get pipeline analytics - recruiter only
 router.get('/pipeline/analytics', protect, recruiterOnly, getPipelineAnalytics);
@@ -41,6 +43,10 @@ router.post('/:id/reject', protect, recruiterOnly, rejectApplication);
 
 // Get resume analysis data for an application - recruiter only
 router.get('/:id/resume-analysis', protect, recruiterOnly, getResumeAnalysis);
+
+// View/download the resume associated with this application or the candidate profile
+router.get('/:id/resume/view', protect, viewApplicationResume);
+router.get('/:id/resume/download', protect, downloadApplicationResume);
 
 // Get a single application by ID - accessible to the candidate who applied and recruiters
 router.get('/:id', protect, getApplicationById);

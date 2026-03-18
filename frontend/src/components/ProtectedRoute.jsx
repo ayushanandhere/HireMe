@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/api';
 
 /**
@@ -9,26 +9,52 @@ import { authService } from '../services/api';
  * @param {string} [props.requiredRole] - Optional role requirement (candidate or recruiter)
  * @returns {React.ReactNode} - Either the children or redirect
  */
-const ProtectedRoute = ({ children, requiredRole }) => {
+const ProtectedRoute = ({ children, requiredRole, allowIncompleteProfile = false }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasRequiredRole, setHasRequiredRole] = useState(false);
+  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    // Check authentication
-    const authenticated = authService.isAuthenticated();
-    setIsAuthenticated(authenticated);
+    let active = true;
 
-    // If authenticated and a role is required, check if user has that role
-    if (authenticated && requiredRole) {
-      const userRole = authService.getUserRole();
-      setHasRequiredRole(userRole === requiredRole);
-    } else {
-      setHasRequiredRole(true); // No role requirement or not authenticated
-    }
+    const checkAuth = async () => {
+      setIsLoading(true);
 
-    setIsLoading(false);
-  }, [requiredRole]);
+      if (!authService.isAuthenticated()) {
+        if (!active) return;
+        setIsAuthenticated(false);
+        setHasRequiredRole(false);
+        setNeedsProfileCompletion(false);
+        setIsLoading(false);
+        return;
+      }
+
+      const validation = await authService.validateSession();
+      if (!active) return;
+
+      if (!validation.isValid) {
+        setIsAuthenticated(false);
+        setHasRequiredRole(false);
+        setNeedsProfileCompletion(false);
+        setIsLoading(false);
+        return;
+      }
+
+      const user = validation.user;
+      setIsAuthenticated(true);
+      setHasRequiredRole(requiredRole ? user.role === requiredRole : true);
+      setNeedsProfileCompletion(user.needsProfileCompletion === true);
+      setIsLoading(false);
+    };
+
+    checkAuth();
+
+    return () => {
+      active = false;
+    };
+  }, [requiredRole, location.pathname]);
 
   if (isLoading) {
     // Could show a loading spinner here
@@ -51,6 +77,10 @@ const ProtectedRoute = ({ children, requiredRole }) => {
       // Fallback to login if role is unknown
       return <Navigate to="/login" replace />;
     }
+  }
+
+  if (!allowIncompleteProfile && needsProfileCompletion) {
+    return <Navigate to={authService.getDefaultRoute()} replace />;
   }
 
   // If authenticated and has the required role (or no role required), render children

@@ -2,7 +2,7 @@ const Candidate = require('../models/candidateModel');
 const Interview = require('../models/interviewModel');
 const mongoose = require('mongoose');
 const { createInterviewRequestNotification } = require('./notificationController');
-const { io } = require('../server');
+const { buildCandidatePayload } = require('../utils/profileSerializers');
 
 /**
  * Get all candidates
@@ -15,16 +15,9 @@ const getAllCandidates = async (req, res) => {
     const candidates = await Candidate.find({}).select('-password');
     
     // Format the response data
-    const formattedCandidates = candidates.map(candidate => ({
-      _id: candidate._id,
-      name: candidate.name,
-      email: candidate.email,
-      skills: candidate.skills,
-      experience: candidate.experience,
+    const formattedCandidates = candidates.map((candidate) => ({
+      ...buildCandidatePayload(candidate),
       resumeId: candidate.resumePath ? candidate._id : null,
-      hasResume: !!candidate.resumePath,
-      role: candidate.role,
-      createdAt: candidate.createdAt
     }));
     
     res.json({
@@ -58,15 +51,8 @@ const getCandidateById = async (req, res) => {
     
     // Format the candidate data
     const formattedCandidate = {
-      _id: candidate._id,
-      name: candidate.name,
-      email: candidate.email,
-      skills: candidate.skills,
-      experience: candidate.experience,
+      ...buildCandidatePayload(candidate),
       resumeId: candidate.resumePath ? candidate._id : null,
-      hasResume: !!candidate.resumePath,
-      role: candidate.role,
-      createdAt: candidate.createdAt,
       // Include resume parsing fields if they exist
       parsedSkills: candidate.parsedSkills || [],
       parsedExperience: candidate.parsedExperience || [],
@@ -147,7 +133,11 @@ const scheduleInterview = async (req, res) => {
     // Emit socket event to the specific candidate if user ID available
     try {
       if (candidate.user) {
-        io.to(`user-${candidate.user.toString()}`).emit('new_interview_request', populatedInterview);
+        if (!global.io) {
+          throw new Error('Socket.io not available');
+        }
+
+        global.io.to(`user-${candidate.user.toString()}`).emit('new_interview_request', populatedInterview);
         console.log(`Emitted 'new_interview_request' to user room: user-${candidate.user.toString()}`);
       } else {
         console.warn('Could not emit socket event: candidate.user field missing');

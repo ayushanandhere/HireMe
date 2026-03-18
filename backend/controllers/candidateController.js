@@ -1,7 +1,46 @@
 const Candidate = require('../models/candidateModel');
+const Application = require('../models/applicationModel');
+const Interview = require('../models/interviewModel');
+const Job = require('../models/jobModel');
 const generateToken = require('../utils/generateToken');
-const fs = require('fs');
-const path = require('path');
+const { getUploadedFile } = require('../middleware/uploadMiddleware');
+const { safeRemoveFile } = require('../utils/fileCleanup');
+const {
+  APPLICATION_STAGES,
+  getApplicationStageCounts,
+  serializeApplication
+} = require('../utils/applicationStages');
+const {
+  isCandidateProfileComplete,
+  needsCandidateProfileCompletion,
+} = require('../utils/profileCompletion');
+const { buildCandidatePayload } = require('../utils/profileSerializers');
+
+const getCandidateSkillSet = (candidate) => {
+  const rawSkills = [
+    ...(candidate.parsedSkills || []),
+    ...(candidate.skills || '').split(',')
+  ];
+
+  return new Set(
+    rawSkills
+      .map((skill) => skill.trim().toLowerCase())
+      .filter(Boolean)
+  );
+};
+
+const scoreJobForCandidate = (job, skillSet) => {
+  const jobSkills = (job.skills || [])
+    .map((skill) => skill.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!jobSkills.length || !skillSet.size) {
+    return 0;
+  }
+
+  const matchedSkills = jobSkills.filter((skill) => skillSet.has(skill));
+  return Math.round((matchedSkills.length / jobSkills.length) * 100);
+};
 
 /**
  * Register a new candidate
@@ -10,16 +49,24 @@ const path = require('path');
  */
 const registerCandidate = async (req, res) => {
   try {
-    const { name, email, password, skills, experience } = req.body;
+    const { name, password, skills, experience, headline, location, phone, linkedin, bio } = req.body;
+    const email = req.body.email?.trim().toLowerCase();
+    const resumeFile = getUploadedFile(req, 'resume');
+
+    if (!email) {
+      safeRemoveFile(resumeFile?.path);
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
 
     // Check if candidate already exists
     const candidateExists = await Candidate.findOne({ email });
 
     if (candidateExists) {
       // Clean up uploaded file if user exists
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
+      safeRemoveFile(resumeFile?.path);
       
       return res.status(400).json({
         success: false,
@@ -29,8 +76,8 @@ const registerCandidate = async (req, res) => {
 
     // Process resume file path if uploaded
     let resumePath = null;
-    if (req.file) {
-      resumePath = req.file.path;
+    if (resumeFile) {
+      resumePath = resumeFile.path;
     }
 
     // Create new candidate
@@ -38,6 +85,11 @@ const registerCandidate = async (req, res) => {
       name,
       email,
       password,
+      headline,
+      location,
+      phone,
+      linkedin,
+      bio,
       skills,
       experience,
       resumePath,
@@ -47,20 +99,13 @@ const registerCandidate = async (req, res) => {
       res.status(201).json({
         success: true,
         data: {
-          _id: candidate._id,
-          name: candidate.name,
-          email: candidate.email,
-          skills: candidate.skills,
-          experience: candidate.experience,
-          role: candidate.role,
+          ...buildCandidatePayload(candidate),
           token: generateToken(candidate._id, candidate.role),
         },
       });
     } else {
       // Clean up uploaded file if user creation fails
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
+      safeRemoveFile(resumeFile?.path);
       
       res.status(400).json({
         success: false,
@@ -69,9 +114,8 @@ const registerCandidate = async (req, res) => {
     }
   } catch (error) {
     // Clean up uploaded file on error
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
+    safeRemoveFile(getUploadedFile(req, 'resume')?.path);
+    safeRemoveFile(getUploadedFile(req, 'profilePicture')?.path);
     
     res.status(500).json({
       success: false,
@@ -87,24 +131,25 @@ const registerCandidate = async (req, res) => {
  */
 const loginCandidate = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const password = req.body.password;
+    const email = req.body.email?.trim().toLowerCase();
 
     // Find candidate by email
     const candidate = await Candidate.findOne({ email });
+
+    if (candidate && !candidate.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account uses Google sign-in. Continue with Google to access it.',
+      });
+    }
 
     // Check if candidate exists and password matches
     if (candidate && (await candidate.matchPassword(password))) {
       res.json({
         success: true,
         data: {
-          _id: candidate._id,
-          name: candidate.name,
-          email: candidate.email,
-          skills: candidate.skills,
-          experience: candidate.experience,
-          resumePath: candidate.resumePath,
-          hasResume: !!candidate.resumePath,
-          role: candidate.role,
+          ...buildCandidatePayload(candidate),
           token: generateToken(candidate._id, candidate.role),
         },
       });
@@ -134,16 +179,7 @@ const getCandidateProfile = async (req, res) => {
     if (candidate) {
       res.json({
         success: true,
-        data: {
-          _id: candidate._id,
-          name: candidate.name,
-          email: candidate.email,
-          skills: candidate.skills,
-          experience: candidate.experience,
-          role: candidate.role,
-          resumePath: candidate.resumePath,
-          hasResume: !!candidate.resumePath,
-        },
+        data: buildCandidatePayload(candidate),
       });
     } else {
       res.status(404).json({
@@ -166,7 +202,18 @@ const getCandidateProfile = async (req, res) => {
  */
 const updateCandidateProfile = async (req, res) => {
   try {
-    const { skills, experience } = req.body;
+    const {
+      name,
+      skills,
+      experience,
+      headline,
+      location,
+      phone,
+      linkedin,
+      bio
+    } = req.body;
+    const resumeFile = getUploadedFile(req, 'resume');
+    const profilePictureFile = getUploadedFile(req, 'profilePicture');
     
     // Get candidate from database
     const candidate = await Candidate.findById(req.user._id);
@@ -179,6 +226,10 @@ const updateCandidateProfile = async (req, res) => {
     }
     
     // Update fields if provided
+    if (name !== undefined) {
+      candidate.name = name;
+    }
+
     if (skills !== undefined) {
       candidate.skills = skills;
     }
@@ -186,21 +237,53 @@ const updateCandidateProfile = async (req, res) => {
     if (experience !== undefined) {
       candidate.experience = experience;
     }
+
+    if (headline !== undefined) {
+      candidate.headline = headline;
+    }
+
+    if (location !== undefined) {
+      candidate.location = location;
+    }
+
+    if (phone !== undefined) {
+      candidate.phone = phone;
+    }
+
+    if (linkedin !== undefined) {
+      candidate.linkedin = linkedin;
+    }
+
+    if (bio !== undefined) {
+      candidate.bio = bio;
+    }
     
     // Handle resume file upload
-    if (req.file) {
-      // If candidate already has a resume, delete the old file
+    if (resumeFile) {
+      // Preserve the old resume if an application record still references it.
       if (candidate.resumePath) {
-        try {
-          fs.unlinkSync(candidate.resumePath);
-        } catch (err) {
-          console.error('Error deleting old resume file:', err);
-          // Continue even if delete fails
+        const existingReferenceCount = await Application.countDocuments({ resumePath: candidate.resumePath });
+        if (existingReferenceCount === 0) {
+          safeRemoveFile(candidate.resumePath);
         }
       }
       
       // Update with new file path
-      candidate.resumePath = req.file.path;
+      candidate.resumePath = resumeFile.path;
+      candidate.parsedSkills = [];
+      candidate.parsedExperience = [];
+      candidate.parsedEducation = [];
+      candidate.atsScore = 0;
+      candidate.parsedResumeDate = undefined;
+      candidate.resumeParsingStatus = 'not_started';
+    }
+
+    if (profilePictureFile) {
+      if (candidate.profilePicturePath) {
+        safeRemoveFile(candidate.profilePicturePath);
+      }
+
+      candidate.profilePicturePath = profilePictureFile.path;
     }
     
     // Save updated candidate
@@ -208,22 +291,101 @@ const updateCandidateProfile = async (req, res) => {
     
     res.json({
       success: true,
-      data: {
-        _id: updatedCandidate._id,
-        name: updatedCandidate.name,
-        email: updatedCandidate.email,
-        skills: updatedCandidate.skills,
-        experience: updatedCandidate.experience,
-        resumePath: updatedCandidate.resumePath,
-        hasResume: !!updatedCandidate.resumePath,
-      },
+      data: buildCandidatePayload(updatedCandidate),
       message: 'Profile updated successfully',
     });
   } catch (error) {
     console.error('Error updating profile:', error);
+    safeRemoveFile(getUploadedFile(req, 'resume')?.path);
+    safeRemoveFile(getUploadedFile(req, 'profilePicture')?.path);
     res.status(500).json({
       success: false,
       message: error.message || 'Error updating profile',
+    });
+  }
+};
+
+/**
+ * Get candidate dashboard summary
+ * @route GET /api/auth/candidate/dashboard-summary
+ * @access Private
+ */
+const getCandidateDashboardSummary = async (req, res) => {
+  try {
+    const candidate = await Candidate.findById(req.user._id);
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Candidate not found',
+      });
+    }
+
+    const [applications, interviews, publishedJobs] = await Promise.all([
+      Application.find({ candidate: candidate._id })
+        .populate('job', 'title company location type skills status createdAt')
+        .sort({ createdAt: -1 }),
+      Interview.find({ candidate: candidate._id })
+        .populate('recruiter', 'name company')
+        .sort({ scheduledDateTime: 1 }),
+      Job.find({ status: 'published' })
+        .select('title company location type skills createdAt')
+        .sort({ createdAt: -1 })
+        .limit(12)
+    ]);
+
+    const stageCounts = getApplicationStageCounts();
+    applications.forEach((application) => {
+      if (stageCounts[application.stage] !== undefined) {
+        stageCounts[application.stage] += 1;
+      }
+    });
+
+    const now = new Date();
+    const upcomingInterviews = interviews
+      .filter((interview) => interview.scheduledDateTime >= now && interview.status !== 'cancelled')
+      .slice(0, 5);
+
+    const candidateSkillSet = getCandidateSkillSet(candidate);
+    const appliedJobIds = new Set(applications.map((application) => String(application.job?._id)));
+    const recommendedJobs = publishedJobs
+      .filter((job) => !appliedJobIds.has(String(job._id)))
+      .map((job) => ({
+        ...job.toObject(),
+        recommendationScore: scoreJobForCandidate(job, candidateSkillSet)
+      }))
+      .sort((a, b) => b.recommendationScore - a.recommendationScore || new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 4);
+
+    res.json({
+      success: true,
+      data: {
+        profile: {
+          ...buildCandidatePayload(candidate)
+        },
+        applicationSummary: {
+          total: applications.length,
+          stageCounts,
+          recent: applications.slice(0, 4).map(serializeApplication)
+        },
+        interviewSummary: {
+          total: interviews.length,
+          upcoming: upcomingInterviews.length,
+          items: upcomingInterviews
+        },
+        resumeStatus: {
+          hasResume: Boolean(candidate.resumePath),
+          parsingStatus: candidate.resumeParsingStatus,
+          atsScore: candidate.atsScore || 0
+        },
+        recommendedJobs
+      },
+    });
+  } catch (error) {
+    console.error('Error getting candidate dashboard summary:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching candidate dashboard summary',
     });
   }
 };
@@ -233,4 +395,5 @@ module.exports = {
   loginCandidate,
   getCandidateProfile,
   updateCandidateProfile,
-}; 
+  getCandidateDashboardSummary,
+};

@@ -5,14 +5,12 @@ import { FaBell } from 'react-icons/fa';
 const SimpleNotification = () => {
   // Try to use the context with a fallback
   let unreadCount = 0;
-  let error = null;
   
   try {
     const context = useNotifications();
     
     if (context) {
       unreadCount = context.unreadCount || 0;
-      error = context.error;
     } else {
       console.warn('Notification context is undefined');
     }

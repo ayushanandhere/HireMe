@@ -18,6 +18,22 @@ const applicationHistorySchema = new mongoose.Schema({
   }
 });
 
+const applicationProfileSnapshotSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: '' },
+    email: { type: String, default: '' },
+    headline: { type: String, default: '' },
+    location: { type: String, default: '' },
+    phone: { type: String, default: '' },
+    linkedin: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    skills: { type: String, default: '' },
+    experience: { type: String, default: '' },
+    profilePicturePath: { type: String, default: '' }
+  },
+  { _id: false }
+);
+
 const applicationSchema = new mongoose.Schema(
   {
     candidate: {
@@ -99,9 +115,22 @@ const applicationSchema = new mongoose.Schema(
     notes: {
       type: String
     },
+    candidateNotes: {
+      type: String,
+      default: ''
+    },
     resumePath: {
       type: String,
       default: null
+    },
+    resumeSource: {
+      type: String,
+      enum: ['profile', 'job-specific'],
+      default: 'profile'
+    },
+    submittedProfile: {
+      type: applicationProfileSnapshotSchema,
+      default: () => ({})
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

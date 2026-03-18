@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Button, Container, Row, Col, Card, Alert } from 'react-bootstrap';
-import { FaBriefcase, FaArrowLeft, FaBuilding, FaMapMarkerAlt, FaCalendarAlt, FaGraduationCap, FaCode } from 'react-icons/fa';
-import { jobService } from '../../services/api';
-import { authService } from '../../services/api';
-import './Dashboard.css';
+import {
+  FaArrowLeft,
+  FaBriefcase,
+  FaBuilding,
+  FaCalendarAlt,
+  FaCode,
+  FaGraduationCap,
+  FaMapMarkerAlt
+} from 'react-icons/fa';
+import { jobService, authService } from '../../services/api';
 import './CreateJobPage.css';
 
 const CreateJobPage = () => {
@@ -20,21 +25,19 @@ const CreateJobPage = () => {
     applicationDeadline: '',
     educationRequirements: ''
   });
-  
-  // Get user data for company name
-  const user = authService.getUser();
-  const company = user?.company || user?.name || '';
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const user = authService.getUser();
+  const company = user?.company || user?.name || '';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((current) => ({
+      ...current,
       [name]: value
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -44,253 +47,232 @@ const CreateJobPage = () => {
     setSuccess('');
 
     try {
-      // Validate required fields
       if (!formData.title || !formData.description) {
-        setError('Please fill in all required fields');
+        setError('Please fill in all required fields.');
         setLoading(false);
         return;
       }
-      
-      // Add company name from user profile
-      const jobDataToSubmit = {
+
+      const response = await jobService.createJob({
         ...formData,
         company
-      };
+      });
 
-      const response = await jobService.createJob(jobDataToSubmit);
-      
       if (response.success) {
-        setSuccess('Job created successfully!');
-        setTimeout(() => {
-          navigate('/dashboard/recruiter/jobs');
-        }, 2000);
+        setSuccess('Job created successfully.');
+        setTimeout(() => navigate('/dashboard/recruiter/jobs'), 1600);
       } else {
-        setError(response.message || 'Failed to create job');
+        setError(response.message || 'Failed to create job.');
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while creating the job');
+      setError(err.message || 'An error occurred while creating the job.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container className="cjp-container dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">
-          <FaBriefcase className="me-2" /> Create New Job
-        </h1>
-        <Button 
-          variant="outline-primary" 
-          onClick={() => navigate('/dashboard/recruiter')}
-          className="d-flex align-items-center"
-        >
-          <FaArrowLeft className="me-2" /> Back to Dashboard
-        </Button>
-      </div>
-      
-      <div className="mb-4">
-        <Card className="cjp-company-card text-center bg-light p-3">
-          <Card.Body>
-            <FaBuilding className="mb-3" style={{ fontSize: '2rem', color: '#4a6cf7' }} />
-            <h4>Creating job for: {company}</h4>
-            <p className="text-muted">All jobs you create will be associated with this company</p>
-          </Card.Body>
-        </Card>
-      </div>
+    <div className="job-creation-page page-shell">
+      <section className="job-creation-hero">
+        <article className="job-creation-hero-copy instrument-card">
+          <span className="eyebrow eyebrow-dark">Role publishing</span>
+          <h1>Create a role with clean matching signal.</h1>
+          <p>
+            Structure the position clearly so candidates, screening, and AI-assisted fit scoring all
+            start from the same brief.
+          </p>
+          <div className="job-creation-hero-actions">
+            <button
+              type="button"
+              className="action-link signal"
+              onClick={() => navigate('/dashboard/recruiter/jobs')}
+            >
+              <FaArrowLeft /> Back to jobs
+            </button>
+          </div>
+        </article>
 
-      <Card className="cjp-form-card dashboard-card">
-        <Card.Body>
-          {error && <Alert variant="danger">{error}</Alert>}
-          {success && <Alert variant="success">{success}</Alert>}
+        <article className="job-creation-company surface-card">
+          <span className="eyebrow">Publisher</span>
+          <div className="job-creation-company-mark">
+            <FaBuilding />
+          </div>
+          <strong>{company || 'Recruiter workspace'}</strong>
+          <p>Every job created here is attached to this company identity and routed into your recruiter pipeline.</p>
+        </article>
+      </section>
 
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-4">
-              <Form.Label>
-                <FaBriefcase className="me-2 text-primary" />
-                <strong>Job Title *</strong>
-              </Form.Label>
-              <Form.Control
+      {error && <div className="job-creation-message error">{error}</div>}
+      {success && <div className="job-creation-message success">{success}</div>}
+
+      <section className="job-creation-grid">
+        <aside className="job-creation-guide surface-card">
+          <div className="job-guide-block">
+            <span className="eyebrow">What matters</span>
+            <h3>Clear inputs produce better screening.</h3>
+            <p>
+              Title, description, skills, and experience constraints directly shape the signals you see
+              later in job applications and interview prep.
+            </p>
+          </div>
+          <div className="job-guide-list">
+            <div className="job-guide-item">
+              <strong>Title</strong>
+              <span>Use the hiring-facing role name candidates recognize immediately.</span>
+            </div>
+            <div className="job-guide-item">
+              <strong>Skills</strong>
+              <span>List core technologies and competencies only. Avoid dumping full toolchains.</span>
+            </div>
+            <div className="job-guide-item">
+              <strong>Description</strong>
+              <span>Write responsibilities and expectations, not marketing copy.</span>
+            </div>
+          </div>
+        </aside>
+
+        <form className="job-creation-form surface-card" onSubmit={handleSubmit}>
+          <div className="job-form-section">
+            <div className="job-form-section-head">
+              <span className="eyebrow">Role brief</span>
+              <h2>Core job definition</h2>
+            </div>
+
+            <label className="job-field">
+              <span><FaBriefcase /> Job Title *</span>
+              <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="e.g. Senior Software Engineer"
+                placeholder="Senior Backend Engineer"
                 required
-                className="form-control-lg"
               />
-            </Form.Group>
+            </label>
 
-            <Form.Group className="mb-4">
-              <Form.Label>
-                <FaCode className="me-2 text-primary" />
-                <strong>Job Description *</strong>
-              </Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={6}
+            <label className="job-field">
+              <span><FaCode /> Job Description *</span>
+              <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Provide a detailed description of the job role, responsibilities, and requirements"
+                rows={7}
+                placeholder="Describe the role, ownership, and technical expectations."
                 required
-                className="form-control-lg"
               />
-              <Form.Text className="text-muted">
-                Include key responsibilities, technical requirements, and day-to-day tasks
-              </Form.Text>
-            </Form.Group>
+              <small>Use a concrete hiring brief. It becomes the baseline for analysis later.</small>
+            </label>
+          </div>
 
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Label>
-                    <FaMapMarkerAlt className="me-2 text-primary" />
-                    <strong>Location</strong>
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="e.g. San Francisco, CA or Remote"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Label>
-                    <strong>Job Type</strong>
-                  </Form.Label>
-                  <Form.Select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleChange}
-                    className="form-select-lg"
-                  >
-                    <option value="full-time">Full-time</option>
-                    <option value="part-time">Part-time</option>
-                    <option value="contract">Contract</option>
-                    <option value="internship">Internship</option>
-                    <option value="temporary">Temporary</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Form.Group className="mb-4">
-              <Form.Label>
-                <strong>Skills (comma-separated)</strong>
-              </Form.Label>
-              <Form.Control
-                type="text"
-                name="skills"
-                value={formData.skills}
-                onChange={handleChange}
-                placeholder="e.g. JavaScript, React, Node.js, MongoDB"
-                className="form-control-lg"
-              />
-              <Form.Text className="text-muted">
-                List the key skills required for this position - these will be used to match candidates
-              </Form.Text>
-            </Form.Group>
-
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Label>
-                    <strong>Experience Level</strong>
-                  </Form.Label>
-                  <Form.Select
-                    name="experienceLevel"
-                    value={formData.experienceLevel}
-                    onChange={handleChange}
-                    className="form-select-lg"
-                  >
-                    <option value="entry">Entry Level</option>
-                    <option value="mid">Mid Level</option>
-                    <option value="senior">Senior Level</option>
-                    <option value="executive">Executive Level</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-4">
-                  <Form.Label>
-                    <strong>Years of Experience</strong>
-                  </Form.Label>
-                  <Form.Select
-                    name="experienceYears"
-                    value={formData.experienceYears}
-                    onChange={handleChange}
-                    className="form-select-lg"
-                  >
-                    <option value="">Select Years</option>
-                    <option value="0-1">0-1 years</option>
-                    <option value="1-3">1-3 years</option>
-                    <option value="3-5">3-5 years</option>
-                    <option value="5-10">5-10 years</option>
-                    <option value="10+">10+ years</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Row>
-              <Col md={12}>
-                <Form.Group className="mb-4">
-                  <Form.Label>
-                    <FaCalendarAlt className="me-2 text-primary" />
-                    <strong>Application Deadline</strong>
-                  </Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="applicationDeadline"
-                    value={formData.applicationDeadline}
-                    onChange={handleChange}
-                    className="form-control-lg"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Form.Group className="mb-4">
-              <Form.Label>
-                <FaGraduationCap className="me-2 text-primary" />
-                <strong>Education Requirements</strong>
-              </Form.Label>
-              <Form.Control
-                type="text"
-                name="educationRequirements"
-                value={formData.educationRequirements}
-                onChange={handleChange}
-                placeholder="e.g. Bachelor's degree in Computer Science or related field"
-                className="form-control-lg"
-              />
-            </Form.Group>
-
-            <div className="d-flex justify-content-end mt-5 cjp-form-actions">
-              <Button 
-                variant="secondary" 
-                className="me-3 px-4 py-2 cjp-cancel-button"
-                size="lg"
-                onClick={() => navigate('/dashboard/recruiter')}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="primary" 
-                type="submit"
-                disabled={loading}
-                className="btn-lg cjp-submit-button"
-              >
-                {loading ? 'Creating...' : 'Create Job'}
-              </Button>
+          <div className="job-form-section">
+            <div className="job-form-section-head">
+              <span className="eyebrow">Matching inputs</span>
+              <h2>Constraints and filters</h2>
             </div>
-          </Form>
-        </Card.Body>
-      </Card>
-    </Container>
+
+            <div className="job-form-grid">
+              <label className="job-field">
+                <span><FaMapMarkerAlt /> Location</span>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="Remote or Bengaluru"
+                />
+              </label>
+
+              <label className="job-field">
+                <span>Job Type</span>
+                <select name="type" value={formData.type} onChange={handleChange}>
+                  <option value="full-time">Full-time</option>
+                  <option value="part-time">Part-time</option>
+                  <option value="contract">Contract</option>
+                  <option value="internship">Internship</option>
+                  <option value="temporary">Temporary</option>
+                </select>
+              </label>
+
+              <label className="job-field job-field-full">
+                <span>Skills</span>
+                <input
+                  type="text"
+                  name="skills"
+                  value={formData.skills}
+                  onChange={handleChange}
+                  placeholder="Node.js, PostgreSQL, system design, REST APIs"
+                />
+                <small>Comma-separated skills used for downstream candidate matching.</small>
+              </label>
+
+              <label className="job-field">
+                <span>Experience Level</span>
+                <select
+                  name="experienceLevel"
+                  value={formData.experienceLevel}
+                  onChange={handleChange}
+                >
+                  <option value="entry">Entry Level</option>
+                  <option value="mid">Mid Level</option>
+                  <option value="senior">Senior Level</option>
+                  <option value="executive">Executive Level</option>
+                </select>
+              </label>
+
+              <label className="job-field">
+                <span>Years of Experience</span>
+                <select
+                  name="experienceYears"
+                  value={formData.experienceYears}
+                  onChange={handleChange}
+                >
+                  <option value="">Select years</option>
+                  <option value="0-1">0-1 years</option>
+                  <option value="1-3">1-3 years</option>
+                  <option value="3-5">3-5 years</option>
+                  <option value="5-10">5-10 years</option>
+                  <option value="10+">10+ years</option>
+                </select>
+              </label>
+
+              <label className="job-field">
+                <span><FaCalendarAlt /> Application Deadline</span>
+                <input
+                  type="date"
+                  name="applicationDeadline"
+                  value={formData.applicationDeadline}
+                  onChange={handleChange}
+                />
+              </label>
+
+              <label className="job-field job-field-full">
+                <span><FaGraduationCap /> Education Requirements</span>
+                <input
+                  type="text"
+                  name="educationRequirements"
+                  value={formData.educationRequirements}
+                  onChange={handleChange}
+                  placeholder="Bachelor's degree in Computer Science or equivalent experience"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="job-form-actions">
+            <button
+              type="button"
+              className="action-link ghost"
+              onClick={() => navigate('/dashboard/recruiter/jobs')}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="action-link primary" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Job'}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 };
 

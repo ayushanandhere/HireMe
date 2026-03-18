@@ -1,9 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, ProgressBar } from 'react-bootstrap'; // Added ProgressBar
-import { FaBuilding, FaBriefcase, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaSearch, FaFileAlt, FaInfoCircle, FaMicrophone } from 'react-icons/fa'; // Added more icons
-import { authService } from '../../services/api';
-import './MyApplicationsPage.css'; // Import new CSS
+import {
+  FaArrowRight,
+  FaBriefcase,
+  FaBuilding,
+  FaCalendarAlt,
+  FaFileAlt,
+  FaInfoCircle,
+  FaMicrophone,
+  FaSearch,
+  FaSpinner
+} from 'react-icons/fa';
+import { authService, applicationService } from '../../services/api';
+import './MyApplicationsPage.css';
+
+const stageLabels = {
+  new_application: 'New',
+  resume_screened: 'Screened',
+  job_matched: 'Matched',
+  interview_requested: 'Interview requested',
+  interview_scheduled: 'Interview scheduled',
+  interview_completed: 'Interview completed',
+  interview_cancelled: 'Interview cancelled',
+  offer_extended: 'Offer extended',
+  offer_accepted: 'Offer accepted',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn'
+};
+
+const getStageTone = (stage) => {
+  if (['job_matched', 'offer_extended', 'offer_accepted', 'interview_completed'].includes(stage)) {
+    return 'positive';
+  }
+  if (['resume_screened', 'interview_scheduled'].includes(stage)) {
+    return 'active';
+  }
+  if (['new_application', 'interview_requested'].includes(stage)) {
+    return 'review';
+  }
+  return 'alert';
+};
 
 const MyApplicationsPage = () => {
   const [applications, setApplications] = useState([]);
@@ -17,22 +53,14 @@ const MyApplicationsPage = () => {
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      
-      // Get user data
+
       const userData = authService.getUser();
       if (!userData || !userData._id) {
         throw new Error('User data not found');
       }
-      
-      // Fetch applications
-      const response = await fetch(`http://localhost:5000/api/applications/candidate/${userData._id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      const data = await response.json();
-      
+
+      const data = await applicationService.getCandidateApplications(userData._id);
+
       if (data.success) {
         setApplications(data.data);
       } else {
@@ -55,176 +83,179 @@ const MyApplicationsPage = () => {
     });
   };
 
-  const getStatusBadge = (status) => {
-    // Updated to return class names for better styling control
-    let badgeVariant = 'secondary';
-    let statusText = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-    switch (status) {
-      case 'new_application': badgeVariant = 'info'; break;
-      case 'resume_screened': badgeVariant = 'primary'; break;
-      case 'job_matched': badgeVariant = 'success'; break;
-      case 'interview_requested': badgeVariant = 'warning'; statusText = 'Interview Requested'; break;
-      case 'interview_scheduled': badgeVariant = 'warning'; statusText = 'Interview Scheduled'; break;
-      case 'interview_completed': badgeVariant = 'info'; statusText = 'Interview Completed'; break;
-      case 'interview_cancelled': badgeVariant = 'danger'; statusText = 'Interview Cancelled'; break;
-      case 'offer_extended': badgeVariant = 'success'; statusText = 'Offer Extended'; break;
-      case 'offer_accepted': badgeVariant = 'success'; statusText = 'Offer Accepted'; break;
-      case 'rejected': badgeVariant = 'danger'; break;
-      case 'withdrawn': badgeVariant = 'dark'; break;
-      default: break;
-    }
-    return <span className={`status-badge status-badge-${badgeVariant}`}>{statusText}</span>;
-  };
-
-  const getStatusIcon = (status) => {
-    // Updated to return icons with consistent class for styling
-    switch (status) {
-      case 'new_application':
-      case 'resume_screened':
-      case 'job_matched':
-        return <FaHourglassHalf className="status-icon status-icon-pending" />;
-      case 'interview_requested':
-      case 'interview_scheduled':
-        return <FaHourglassHalf className="status-icon status-icon-warning" />;
-      case 'offer_extended':
-      case 'offer_accepted':
-      case 'interview_completed':
-        return <FaCheckCircle className="status-icon status-icon-success" />;
-      case 'interview_cancelled':
-      case 'rejected':
-      case 'withdrawn':
-        return <FaTimesCircle className="status-icon status-icon-danger" />;
-      default:
-        return <FaFileAlt className="status-icon status-icon-default" />;
-    }
-  };
+  const activeCount = applications.filter(
+    (application) => !['rejected', 'withdrawn', 'interview_cancelled'].includes(application.stage)
+  ).length;
+  const interviewCount = applications.filter((application) =>
+    ['interview_requested', 'interview_scheduled', 'interview_completed'].includes(application.stage)
+  ).length;
+  const offerCount = applications.filter((application) =>
+    ['offer_extended', 'offer_accepted'].includes(application.stage)
+  ).length;
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-        <p className="mt-3">Loading your applications...</p>
+      <div className="applications-hub-loading">
+        <FaSpinner className="applications-hub-spinner" />
+        <p>Loading your applications...</p>
       </div>
     );
   }
 
   return (
-    <div className="my-applications-page">
-      <header className="map-header">
-        <h1 className="map-title">My Applications</h1>
-        <Link to="/dashboard/candidate/jobs" className="map-browse-jobs-btn">
-          <FaSearch className="me-2" /> Browse More Jobs
-        </Link>
-      </header>
+    <div className="applications-hub page-shell">
+      <section className="applications-hero">
+        <article className="applications-hero-copy surface-card">
+          <span className="eyebrow">Pipeline tracker</span>
+          <h1>Read the pipeline before it surprises you.</h1>
+          <p>
+            Every application is a live signal. Track stage movement, open prep workflows at the
+            right moment, and avoid drifting out of position.
+          </p>
+          <div className="applications-hero-actions">
+            <Link to="/dashboard/candidate/jobs" className="action-link primary">
+              Browse more roles <FaArrowRight />
+            </Link>
+            <Link to="/dashboard/candidate" className="action-link ghost">
+              Return to overview
+            </Link>
+          </div>
+        </article>
+
+        <article className="applications-hero-panel instrument-card">
+          <div className="applications-hero-head">
+            <span className="eyebrow eyebrow-dark">Signal summary</span>
+            <span className="signal-chip ai">Tracked pipeline</span>
+          </div>
+          <div className="applications-hero-stats">
+            <div>
+              <span className="applications-stat-label">Total</span>
+              <strong>{applications.length}</strong>
+            </div>
+            <div>
+              <span className="applications-stat-label">Active</span>
+              <strong>{activeCount}</strong>
+            </div>
+            <div>
+              <span className="applications-stat-label">Interviews</span>
+              <strong>{interviewCount}</strong>
+            </div>
+            <div>
+              <span className="applications-stat-label">Offers</span>
+              <strong>{offerCount}</strong>
+            </div>
+          </div>
+        </article>
+      </section>
 
       {error && (
-        <div className="map-error-alert">
-          <FaInfoCircle className="me-2" /> {error}
+        <div className="applications-error">
+          <FaInfoCircle /> {error}
         </div>
       )}
 
-      {applications.length === 0 && !loading && (
-        <div className="map-empty-state">
-          <FaFileAlt className="map-empty-icon" />
-          <h2>No Applications Found</h2>
-          <p>You haven't applied to any jobs yet. Start your job search today!</p>
-          <Link to="/dashboard/candidate/jobs" className="map-browse-jobs-btn-empty">
-            <FaSearch className="me-2" /> Browse Available Jobs
+      {applications.length === 0 ? (
+        <section className="applications-empty surface-card">
+          <FaFileAlt />
+          <h2>No applications tracked yet.</h2>
+          <p>Start with a role worth pursuing, then return here to monitor movement and prep.</p>
+          <Link to="/dashboard/candidate/jobs" className="action-link primary">
+            Browse available jobs
           </Link>
-        </div>
-      )}
+        </section>
+      ) : (
+        <section className="applications-grid">
+          {applications.map((application) => {
+            const tone = getStageTone(application.stage);
+            const stageLabel = stageLabels[application.stage] || application.stage;
+            const matchScore = application.matchScore || application.candidateRoleFit || 0;
+            const feedbackScore = application.feedbackScore || 0;
 
-      {applications.length > 0 && (
-        <div className="map-applications-grid">
-          {applications.map(application => (
-            <div key={application._id} className="map-application-card">
-              <div className="map-card-header">
-                <div className="map-job-title">{application.job.title}</div>
-                <div className="map-status-icon-wrapper">
-                  {getStatusIcon(application.stage)}
+            return (
+              <article key={application._id} className="application-card surface-card">
+                <div className="application-card-top">
+                  <span className={`signal-chip ${tone}`}>{stageLabel}</span>
+                  <span className="application-date mono">{formatDate(application.createdAt)}</span>
                 </div>
-              </div>
-              <div className="map-company-info">
-                <FaBuilding className="map-icon" /> {application.job.company}
-              </div>
-              <div className="map-job-details">
-                <span><FaBriefcase className="map-icon" /> {application.job.type}</span>
-                {application.job.location && <span>{application.job.location}</span>}
-              </div>
-              <div className="map-date-applied">
-                <FaCalendarAlt className="map-icon" /> Applied: {formatDate(application.createdAt)}
-              </div>
-              <div className="map-status-section">
-                Current Status: {getStatusBadge(application.stage)}
-              </div>
 
-              {/* Special messages based on stage */}
-              {application.stage === 'interview_requested' && (
-                <div className="map-alert map-alert-warning">
-                  <strong>Interview Requested!</strong> Check notifications.
+                <div className="application-card-head">
+                  <div>
+                    <h3>{application.job?.title}</h3>
+                    <span>
+                      <FaBuilding /> {application.job?.company}
+                    </span>
+                  </div>
+                  <div className="application-score-pill">
+                    <span className="mono">Fit</span>
+                    <strong>{matchScore}%</strong>
+                  </div>
                 </div>
-              )}
-              {application.stage === 'interview_scheduled' && (
-                <div className="map-alert map-alert-info">
-                  <strong>Interview Scheduled!</strong> Prepare well.
-                </div>
-              )}
-              {application.stage === 'interview_cancelled' && (
-                <div className="map-alert map-alert-danger">
-                  <strong>Interview Cancelled!</strong> The recruiter has cancelled this interview.
-                </div>
-              )}
-              {application.stage === 'rejected' && (
-                <div className="map-alert map-alert-danger">
-                  <strong>Application Update:</strong> Recruiter is pursuing other candidates.
-                </div>
-              )}
 
-              {/* Match Scores - Using React-Bootstrap ProgressBar */}
-              {(application.matchScore > 0 || application.feedbackScore > 0) && (
-                <div className="map-scores-section">
-                  {application.matchScore > 0 && (
-                    <div className="map-score-item">
-                      <label>Job Match:</label>
-                      <ProgressBar 
-                        now={application.matchScore} 
-                        label={`${application.matchScore}%`} 
-                        variant="info" 
-                        animated 
-                        className="map-progress-bar"
+                <div className="application-meta">
+                  <span>
+                    <FaBriefcase /> {application.job?.type || 'Role'}
+                  </span>
+                  {application.job?.location && <span>{application.job.location}</span>}
+                  {feedbackScore > 0 && <span>Feedback {feedbackScore}%</span>}
+                </div>
+
+                {matchScore > 0 && (
+                  <div className="application-meter">
+                    <div className="application-meter-head">
+                      <span>Candidate-role fit</span>
+                      <strong>{matchScore}%</strong>
+                    </div>
+                    <div className="application-meter-track">
+                      <div
+                        className={`application-meter-bar tone-${tone}`}
+                        style={{ width: `${Math.max(matchScore, 6)}%` }}
                       />
                     </div>
-                  )}
-                  {application.feedbackScore > 0 && (
-                    <div className="map-score-item">
-                      <label>Feedback Score:</label>
-                      <ProgressBar 
-                        now={application.feedbackScore} 
-                        label={`${application.feedbackScore}%`} 
-                        variant="success" 
-                        animated 
-                        className="map-progress-bar"
-                      />
-                    </div>
-                  )}
+                  </div>
+                )}
+
+                {application.stage === 'interview_requested' && (
+                  <div className="application-note review">
+                    Recruiter has requested an interview. Open prep before the schedule lands.
+                  </div>
+                )}
+                {application.stage === 'interview_scheduled' && (
+                  <div className="application-note active">
+                    Interview is scheduled. This application is now in execution mode.
+                  </div>
+                )}
+                {application.stage === 'rejected' && (
+                  <div className="application-note alert">
+                    This role is closed. Use the signal to tighten the next application.
+                  </div>
+                )}
+                {application.stage === 'interview_cancelled' && (
+                  <div className="application-note alert">
+                    Interview was cancelled. Watch for rescheduling before redirecting effort.
+                  </div>
+                )}
+
+                <div className="application-card-actions">
+                  <Link
+                    to={`/dashboard/candidate/applications/${application._id}`}
+                    className="action-link secondary"
+                  >
+                    Review packet
+                  </Link>
+                  <Link to={`/application/${application._id}/training`} className="action-link ghost">
+                    Training room
+                  </Link>
+                  <Link
+                    to={`/application/${application._id}/mock-interview`}
+                    className="action-link ghost"
+                  >
+                    <FaMicrophone /> Mock interview
+                  </Link>
                 </div>
-              )}
-              
-              {/* Action buttons */}
-              <div className="map-action-buttons">
-                <Link to={`/application/${application._id}/training`} className="map-training-btn">
-                  <FaBriefcase className="me-2" /> AI Interview Training
-                </Link>
-                <Link to={`/application/${application._id}/mock-interview`} className="map-mock-interview-btn">
-                  <FaMicrophone className="me-2" /> AI Voice Interview
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+              </article>
+            );
+          })}
+        </section>
       )}
     </div>
   );

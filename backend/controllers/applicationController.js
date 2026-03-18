@@ -5,10 +5,86 @@ const Job = require('../models/jobModel');
 const Candidate = require('../models/candidateModel');
 const AIService = require('../services/aiService');
 const fs = require('fs');
-const path = require('path');
 const { promisify } = require('util');
 const readFile = promisify(fs.readFile);
 const pdfParse = require('pdf-parse');
+const { safeRemoveFile } = require('../utils/fileCleanup');
+const { resolveStoredFilePath, storedFileExists, getStoredFileName } = require('../utils/storedFiles');
+const { buildCandidateApplicationSnapshot } = require('../utils/profileSerializers');
+const {
+  APPLICATION_STAGES,
+  getApplicationStageCounts,
+  isValidApplicationStage,
+  serializeApplication,
+  transitionApplication
+} = require('../utils/applicationStages');
+
+const assertRecruiterOwnsJob = async (jobId, recruiterId) => {
+  const job = await Job.findById(jobId);
+
+  if (!job) {
+    const error = new Error('Job not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (job.recruiter.toString() !== recruiterId.toString()) {
+    const error = new Error('Not authorized to access applications for this job');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return job;
+};
+
+const getAuthorizedApplication = async (applicationId, user) => {
+  const application = await Application.findById(applicationId)
+    .populate({
+      path: 'job',
+      populate: {
+        path: 'recruiter',
+        select: 'name company title location bio companyWebsite companySize industry profilePicturePath'
+      }
+    })
+    .populate('candidate', '-password');
+
+  if (!application) {
+    const error = new Error('Application not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const recruiterOwnsJob = user.role === 'recruiter'
+    && application.job?.recruiter?._id?.toString() === user._id.toString();
+  const candidateOwnsApplication = user.role === 'candidate'
+    && application.candidate?._id?.toString() === user._id.toString();
+
+  if (!recruiterOwnsJob && !candidateOwnsApplication) {
+    const error = new Error('You do not have permission to access this application');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return application;
+};
+
+const getApplicationResumeContext = (application, scope = 'submitted') => {
+  if (scope === 'profile') {
+    return {
+      filePath: application.candidate?.resumePath || '',
+      source: 'profile',
+      label: 'candidate profile resume'
+    };
+  }
+
+  return {
+    filePath: application.resumePath || '',
+    source: application.resumeSource || 'profile',
+    label: application.resumeSource === 'job-specific'
+      ? 'job-specific submitted resume'
+      : 'submitted profile resume'
+  };
+};
 
 /**
  * Create a new application
@@ -17,14 +93,16 @@ const pdfParse = require('pdf-parse');
  */
 const createApplication = asyncHandler(async (req, res) => {
   try {
-    const { candidateId, jobId, notes } = req.body;
+    const { jobId, notes } = req.body;
+    const candidateId = req.user._id.toString();
     let resumePath = null;
     
     // Validate input
-    if (!candidateId || !jobId) {
+    if (!jobId) {
+      safeRemoveFile(req.file?.path);
       return res.status(400).json({
         success: false,
-        message: 'Candidate ID and Job ID are required'
+        message: 'Job ID is required'
       });
     }
     
@@ -35,6 +113,7 @@ const createApplication = asyncHandler(async (req, res) => {
     });
     
     if (existingApplication) {
+      safeRemoveFile(req.file?.path);
       return res.status(400).json({
         success: false,
         message: 'Application already exists for this candidate and job'
@@ -48,6 +127,7 @@ const createApplication = asyncHandler(async (req, res) => {
     ]);
     
     if (!candidate) {
+      safeRemoveFile(req.file?.path);
       return res.status(404).json({
         success: false,
         message: 'Candidate not found'
@@ -55,9 +135,18 @@ const createApplication = asyncHandler(async (req, res) => {
     }
     
     if (!job) {
+      safeRemoveFile(req.file?.path);
       return res.status(404).json({
         success: false,
         message: 'Job not found'
+      });
+    }
+
+    if (job.status !== 'published') {
+      safeRemoveFile(req.file?.path);
+      return res.status(400).json({
+        success: false,
+        message: 'Applications can only be created for published jobs'
       });
     }
     
@@ -85,17 +174,25 @@ const createApplication = asyncHandler(async (req, res) => {
       missingSkills: applicationData.missingSkills || [],
       atsScore: applicationData.atsScore || 0,
       notes,
+      candidateNotes: notes,
       resumePath: resumePath || candidate.resumePath, // Store the resume path
+      resumeSource: resumePath ? 'job-specific' : 'profile',
+      submittedProfile: buildCandidateApplicationSnapshot(candidate),
       createdBy: req.user._id
     });
     
     await application.save();
+
+    const createdApplication = await Application.findById(application._id)
+      .populate('job', 'title company location type')
+      .populate('candidate', 'name email skills experience');
     
     res.status(201).json({
       success: true,
-      data: application
+      data: serializeApplication(createdApplication)
     });
   } catch (error) {
+    safeRemoveFile(req.file?.path);
     console.error('Error creating application:', error);
     res.status(500).json({
       success: false,
@@ -121,9 +218,16 @@ const updateApplicationStage = asyncHandler(async (req, res) => {
         message: 'Stage is required'
       });
     }
+
+    if (!isValidApplicationStage(stage)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid application stage'
+      });
+    }
     
     // Find application
-    const application = await Application.findById(id);
+    const application = await Application.findById(id).populate('job');
     
     if (!application) {
       return res.status(404).json({
@@ -131,15 +235,16 @@ const updateApplicationStage = asyncHandler(async (req, res) => {
         message: 'Application not found'
       });
     }
-    
-    // Update stage
-    application.stage = stage;
-    
-    // Add to history
-    application.history.push({
-      stage,
-      timestamp: new Date(),
-      notes: notes || `Moved to ${stage} stage`,
+
+    if (application.job.recruiter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this application'
+      });
+    }
+
+    transitionApplication(application, stage, {
+      notes,
       updatedBy: req.user._id
     });
     
@@ -150,14 +255,18 @@ const updateApplicationStage = asyncHandler(async (req, res) => {
     
     // Save changes
     await application.save();
+
+    const updatedApplication = await Application.findById(id)
+      .populate('job', 'title company location type')
+      .populate('candidate', 'name email skills experience');
     
     res.status(200).json({
       success: true,
-      data: application
+      data: serializeApplication(updatedApplication)
     });
   } catch (error) {
     console.error('Error updating application stage:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       message: error.message
     });
@@ -173,12 +282,14 @@ const getJobApplications = asyncHandler(async (req, res) => {
   try {
     const { jobId } = req.params;
     const { stage, sort = 'createdAt', order = 'desc', limit = 100, page = 1 } = req.query;
+
+    await assertRecruiterOwnsJob(jobId, req.user._id);
     
     // Build query
     const query = { job: jobId };
     
     // Add stage filter if provided
-    if (stage) {
+    if (stage && isValidApplicationStage(stage)) {
       query.stage = stage;
     }
     
@@ -191,7 +302,15 @@ const getJobApplications = asyncHandler(async (req, res) => {
     
     // Execute query
     const applications = await Application.find(query)
-      .populate('candidate', 'name email skills')
+      .populate('candidate', 'name email skills experience headline location phone linkedin bio resumePath profilePicturePath parsedSkills atsScore parsedResumeDate resumeParsingStatus updatedAt createdAt')
+      .populate({
+        path: 'job',
+        select: 'title company location type recruiter',
+        populate: {
+          path: 'recruiter',
+          select: 'name company title location bio companyWebsite companySize industry profilePicturePath'
+        }
+      })
       .skip(skip)
       .limit(parseInt(limit))
       .sort(sortOptions);
@@ -205,11 +324,11 @@ const getJobApplications = asyncHandler(async (req, res) => {
       total: totalApplications,
       pages: Math.ceil(totalApplications / parseInt(limit)),
       currentPage: parseInt(page),
-      data: applications
+      data: applications.map(serializeApplication)
     });
   } catch (error) {
     console.error('Error getting job applications:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       message: error.message
     });
@@ -225,8 +344,8 @@ const getCandidateApplications = asyncHandler(async (req, res) => {
   try {
     const { candidateId } = req.params;
     
-    // Ensure the user has access to this candidate's applications
-    if (req.user.role === 'candidate' && req.user._id.toString() !== candidateId) {
+    // Candidates may only access their own application history.
+    if (req.user._id.toString() !== candidateId) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view these applications'
@@ -235,13 +354,20 @@ const getCandidateApplications = asyncHandler(async (req, res) => {
     
     // Get applications
     const applications = await Application.find({ candidate: candidateId })
-      .populate('job', 'title company location type')
+      .populate({
+        path: 'job',
+        select: 'title company location type recruiter',
+        populate: {
+          path: 'recruiter',
+          select: 'name company title location bio companyWebsite companySize industry profilePicturePath'
+        }
+      })
       .sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,
       count: applications.length,
-      data: applications
+      data: applications.map(serializeApplication)
     });
   } catch (error) {
     console.error('Error getting candidate applications:', error);
@@ -259,8 +385,37 @@ const getCandidateApplications = asyncHandler(async (req, res) => {
  */
 const getPipelineAnalytics = asyncHandler(async (req, res) => {
   try {
-    // Get analytics from pipeline service
-    const analytics = await PipelineService.getPipelineAnalytics();
+    const recruiterJobs = await Job.find({ recruiter: req.user._id }).select('_id');
+    const jobIds = recruiterJobs.map((job) => job._id);
+    const applications = await Application.find({ job: { $in: jobIds } }).select('stage createdAt history');
+    const stageCounts = getApplicationStageCounts();
+
+    applications.forEach((application) => {
+      if (stageCounts[application.stage] !== undefined) {
+        stageCounts[application.stage] += 1;
+      }
+    });
+
+    const interviewStages = (
+      stageCounts[APPLICATION_STAGES.INTERVIEW_REQUESTED] +
+      stageCounts[APPLICATION_STAGES.INTERVIEW_SCHEDULED] +
+      stageCounts[APPLICATION_STAGES.INTERVIEW_COMPLETED]
+    );
+
+    const offerStages = (
+      stageCounts[APPLICATION_STAGES.OFFER_EXTENDED] +
+      stageCounts[APPLICATION_STAGES.OFFER_ACCEPTED]
+    );
+
+    const analytics = {
+      stageCounts,
+      conversionRates: {
+        application_to_interview: applications.length ? Math.round((interviewStages / applications.length) * 100) : 0,
+        interview_to_offer: interviewStages ? Math.round((offerStages / interviewStages) * 100) : 0,
+        offer_to_acceptance: offerStages ? Math.round((stageCounts[APPLICATION_STAGES.OFFER_ACCEPTED] / offerStages) * 100) : 0,
+        overall_conversion: applications.length ? Math.round((stageCounts[APPLICATION_STAGES.OFFER_ACCEPTED] / applications.length) * 100) : 0
+      }
+    };
     
     res.status(200).json({
       success: true,
@@ -285,16 +440,7 @@ const parseResumeForJobApplication = asyncHandler(async (req, res) => {
     const { id } = req.params;
     
     // Find application
-    const application = await Application.findById(id)
-      .populate('job')
-      .populate('candidate');
-    
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
+    const application = await getAuthorizedApplication(id, req.user);
     
     // Determine which resume to use based on context
     // Priority: 1. Application-specific resume (if exists), 2. Candidate's generic resume
@@ -310,7 +456,7 @@ const parseResumeForJobApplication = asyncHandler(async (req, res) => {
       console.log(`Using candidate's generic resume for application ${id}: ${resumePath}`);
     }
     
-    if (!resumePath) {
+    if (!resumePath || !storedFileExists(resumePath)) {
       return res.status(400).json({
         success: false,
         message: 'No resume found for this application'
@@ -320,13 +466,14 @@ const parseResumeForJobApplication = asyncHandler(async (req, res) => {
     // Read the resume file
     let resumeText = '';
     try {
-      if (resumePath.endsWith('.pdf')) {
-        const dataBuffer = await readFile(resumePath);
+      const resolvedResumePath = resolveStoredFilePath(resumePath);
+      if (resolvedResumePath.endsWith('.pdf')) {
+        const dataBuffer = await readFile(resolvedResumePath);
         const pdfData = await pdfParse(dataBuffer);
         resumeText = pdfData.text;
       } else {
         // For other file types, you might need different parsers
-        resumeText = await readFile(resumePath, 'utf8');
+        resumeText = await readFile(resolvedResumePath, 'utf8');
       }
     } catch (fileError) {
       console.error('Error reading resume file:', fileError);
@@ -347,7 +494,7 @@ const parseResumeForJobApplication = asyncHandler(async (req, res) => {
     };
     
     // Determine resume source for logging and tracking
-    const resumeSource = application.resumePath ? 'job-specific' : 'generic';
+    const resumeSource = application.resumeSource === 'job-specific' ? 'job-specific' : 'profile';
     console.log(`Using ${resumeSource} resume for application ${id}`);
     
     // Parse resume for this specific job
@@ -372,10 +519,7 @@ const parseResumeForJobApplication = asyncHandler(async (req, res) => {
     application.atsScore = parsedData.jobSpecificAtsScore;
     
     // Update stage to SCREENED
-    application.stage = 'resume_screened';
-    application.history.push({
-      stage: 'resume_screened',
-      timestamp: new Date(),
+    transitionApplication(application, APPLICATION_STAGES.SCREENED, {
       notes: 'Resume screened by recruiter',
       updatedBy: req.user._id
     });
@@ -385,7 +529,7 @@ const parseResumeForJobApplication = asyncHandler(async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        application,
+        application: serializeApplication(application),
         parsedResume: parsedData
       }
     });
@@ -418,13 +562,16 @@ const acceptForInterview = asyncHandler(async (req, res) => {
         message: 'Application not found'
       });
     }
-    
-    // Update stage to INTERVIEW_REQUESTED
-    application.stage = 'interview_requested';
-    application.history.push({
-      stage: 'interview_requested',
-      timestamp: new Date(),
-      notes: 'Candidate accepted for interview',
+
+    if (application.job.recruiter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this application'
+      });
+    }
+
+    transitionApplication(application, APPLICATION_STAGES.INTERVIEW_REQUESTED, {
+      notes: 'Candidate selected for interview',
       updatedBy: req.user._id
     });
     
@@ -434,7 +581,7 @@ const acceptForInterview = asyncHandler(async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: application,
+      data: serializeApplication(application),
       message: 'Candidate accepted for interview'
     });
   } catch (error) {
@@ -465,12 +612,16 @@ const rejectApplication = asyncHandler(async (req, res) => {
         message: 'Application not found'
       });
     }
-    
-    // Update stage to REJECTED
-    application.stage = 'rejected';
-    application.history.push({
-      stage: 'rejected',
-      timestamp: new Date(),
+
+    const job = await Job.findById(application.job);
+    if (!job || job.recruiter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to reject this application'
+      });
+    }
+
+    transitionApplication(application, APPLICATION_STAGES.REJECTED, {
       notes: reason || 'Application rejected',
       updatedBy: req.user._id
     });
@@ -481,7 +632,7 @@ const rejectApplication = asyncHandler(async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: application,
+      data: serializeApplication(application),
       message: 'Application rejected'
     });
   } catch (error) {
@@ -503,19 +654,10 @@ const getResumeAnalysis = asyncHandler(async (req, res) => {
     const { id } = req.params;
     
     // Find application
-    const application = await Application.findById(id)
-      .populate('job')
-      .populate('candidate');
-    
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
+    const application = await getAuthorizedApplication(id, req.user);
     
     // Check if application has been parsed
-    if (application.stage === 'new') {
+    if (application.stage === APPLICATION_STAGES.NEW) {
       return res.status(400).json({
         success: false,
         message: 'Resume has not been parsed for this application'
@@ -523,7 +665,7 @@ const getResumeAnalysis = asyncHandler(async (req, res) => {
     }
     
     // Determine which resume was used
-    const resumeSource = application.resumePath ? 'job-specific' : 'generic';
+    const resumeSource = application.resumeSource === 'job-specific' ? 'job-specific' : 'profile';
     
     // If we have the enhanced analysis data stored in the application, return it
     // Otherwise, we need to parse the resume again to get the enhanced analysis
@@ -540,7 +682,7 @@ const getResumeAnalysis = asyncHandler(async (req, res) => {
       resumePath = application.candidate.resumePath;
     }
     
-    if (!resumePath) {
+    if (!resumePath || !storedFileExists(resumePath)) {
       return res.status(400).json({
         success: false,
         message: 'No resume found for this application'
@@ -550,13 +692,14 @@ const getResumeAnalysis = asyncHandler(async (req, res) => {
     // Read the resume file
     let resumeText = '';
     try {
-      if (resumePath.endsWith('.pdf')) {
-        const dataBuffer = await readFile(resumePath);
+      const resolvedResumePath = resolveStoredFilePath(resumePath);
+      if (resolvedResumePath.endsWith('.pdf')) {
+        const dataBuffer = await readFile(resolvedResumePath);
         const pdfData = await pdfParse(dataBuffer);
         resumeText = pdfData.text;
       } else {
         // For other file types, you might need different parsers
-        resumeText = await readFile(resumePath, 'utf8');
+        resumeText = await readFile(resolvedResumePath, 'utf8');
       }
     } catch (fileError) {
       console.error('Error reading resume file:', fileError);
@@ -582,7 +725,7 @@ const getResumeAnalysis = asyncHandler(async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        application,
+        application: serializeApplication(application),
         resumeSource,
         enhancedAnalysis: parsedData.enhancedAnalysis,
         jobMatch: parsedData.jobMatch,
@@ -606,40 +749,67 @@ const getResumeAnalysis = asyncHandler(async (req, res) => {
 const getApplicationById = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Find application with populated job and candidate
-    const application = await Application.findById(id)
-      .populate('job')
-      .populate('candidate', '-password');
-    
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-    
-    // Check if the user has permission to access this application
-    const user = req.user;
-    
-    // Allow access if the user is a recruiter or the candidate who submitted the application
-    if (user.role === 'recruiter' || 
-        (user.role === 'candidate' && user._id.toString() === application.candidate._id.toString())) {
-      return res.status(200).json({
-        success: true,
-        data: application
-      });
-    } else {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to access this application'
-      });
-    }
+    const application = await getAuthorizedApplication(id, req.user);
+
+    return res.status(200).json({
+      success: true,
+      data: serializeApplication(application)
+    });
   } catch (error) {
     console.error('Error fetching application:', error);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Server error while fetching application'
+      message: error.message || 'Server error while fetching application'
+    });
+  }
+});
+
+const viewApplicationResume = asyncHandler(async (req, res) => {
+  try {
+    const application = await getAuthorizedApplication(req.params.id, req.user);
+    const scope = req.query.scope === 'profile' ? 'profile' : 'submitted';
+    const resumeContext = getApplicationResumeContext(application, scope);
+    const resolvedPath = resolveStoredFilePath(resumeContext.filePath);
+
+    if (!resumeContext.filePath || !storedFileExists(resumeContext.filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: `The ${resumeContext.label} is not available`
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${getStoredFileName(resolvedPath)}"`);
+    fs.createReadStream(resolvedPath).pipe(res);
+  } catch (error) {
+    console.error('Error viewing application resume:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Error viewing resume'
+    });
+  }
+});
+
+const downloadApplicationResume = asyncHandler(async (req, res) => {
+  try {
+    const application = await getAuthorizedApplication(req.params.id, req.user);
+    const scope = req.query.scope === 'profile' ? 'profile' : 'submitted';
+    const resumeContext = getApplicationResumeContext(application, scope);
+    const resolvedPath = resolveStoredFilePath(resumeContext.filePath);
+
+    if (!resumeContext.filePath || !storedFileExists(resumeContext.filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: `The ${resumeContext.label} is not available`
+      });
+    }
+
+    res.download(resolvedPath, getStoredFileName(resolvedPath));
+  } catch (error) {
+    console.error('Error downloading application resume:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Error downloading resume'
     });
   }
 });
@@ -654,5 +824,7 @@ module.exports = {
   acceptForInterview,
   rejectApplication,
   getResumeAnalysis,
-  getApplicationById
-}; 
+  getApplicationById,
+  viewApplicationResume,
+  downloadApplicationResume
+};

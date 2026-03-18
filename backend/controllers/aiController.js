@@ -7,6 +7,19 @@ const { OpenAI } = require('openai');
 const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
+const isAIConfigured = Boolean(process.env.OPENAI_API_KEY);
+
+const respondIfAIDisabled = (res) => {
+  if (isAIConfigured) {
+    return false;
+  }
+
+  res.status(503).json({
+    success: false,
+    message: 'AI features are unavailable until OPENAI_API_KEY is configured.'
+  });
+  return true;
+};
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -33,6 +46,10 @@ const extractTextFromPDF = async (resumePath) => {
 // Get initial context for the AI assistant
 exports.getInitialContext = async (req, res) => {
   try {
+    if (respondIfAIDisabled(res)) {
+      return;
+    }
+
     const { interviewId } = req.params;
     
     // Validate interviewId
@@ -178,6 +195,10 @@ exports.getInitialContext = async (req, res) => {
 // Handle AI assistant messages
 exports.handleMessage = async (req, res) => {
   try {
+    if (respondIfAIDisabled(res)) {
+      return;
+    }
+
     const { message, interviewId, candidateId, jobId, responseMode = 'normal' } = req.body;
     
     // Validate required fields
@@ -524,6 +545,10 @@ When assessing role fit:
 // Get initial context for the candidate AI training assistant
 exports.getTrainingContext = async (req, res) => {
   try {
+    if (respondIfAIDisabled(res)) {
+      return;
+    }
+
     const { applicationId } = req.params;
     
     // Validate applicationId
@@ -664,6 +689,10 @@ exports.getTrainingContext = async (req, res) => {
 // Handle AI training assistant messages
 exports.handleTrainingMessage = async (req, res) => {
   try {
+    if (respondIfAIDisabled(res)) {
+      return;
+    }
+
     const { message, applicationId, responseMode = 'normal' } = req.body;
     
     // Validate required fields

@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Spinner, Alert, Badge, ProgressBar, Tabs, Tab, Modal, Accordion } from 'react-bootstrap';
 import { FaArrowLeft, FaMicrophone, FaMicrophoneSlash, FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaRobot, FaUser, FaFileAlt, FaChartLine, FaCheckCircle, FaTimesCircle, FaBriefcase, FaWifi, FaExclamationTriangle, FaStar, FaCheck, FaExclamation, FaLightbulb } from 'react-icons/fa';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { authService } from '../../services/api';
+import { applicationService, buildAssetUrl, mockInterviewService } from '../../services/api';
 import './AIMockInterviewRoom.css';
 
 const AIMockInterviewRoom = () => {
@@ -17,7 +15,7 @@ const AIMockInterviewRoom = () => {
   const [errorType, setErrorType] = useState(null); // 'network', 'microphone', 'server', 'unknown'
   const [application, setApplication] = useState(null);
   const [interviewMode, setInterviewMode] = useState('technical'); // technical, behavioral, hr
-  const [interviewModeDescription, setInterviewModeDescription] = useState({
+  const [interviewModeDescription] = useState({
     technical: 'Focuses on coding, problem-solving, and technical knowledge relevant to the job.',
     behavioral: 'Assesses soft skills, teamwork, and how you handled past situations.',
     hr: 'Explores career goals, company fit, salary expectations, and work preferences.'
@@ -30,8 +28,8 @@ const AIMockInterviewRoom = () => {
   const [answers, setAnswers] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
-  const [transcription, setTranscription] = useState('');
+  const [, setAudioChunks] = useState([]);
+  const [, setTranscription] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
@@ -44,7 +42,6 @@ const AIMockInterviewRoom = () => {
   const [showInterviewTypeModal, setShowInterviewTypeModal] = useState(false); // Flag to show interview type selection modal
   
   // References
-  const audioRef = useRef(null);
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -59,13 +56,7 @@ const AIMockInterviewRoom = () => {
         setLoading(true);
         
         // Fetch application details
-        const response = await fetch(`http://localhost:5000/api/applications/${applicationId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
-        const applicationData = await response.json();
+        const applicationData = await applicationService.getApplicationById(applicationId);
         
         if (!applicationData.success) {
           throw new Error(applicationData.message || 'Failed to load application details');
@@ -84,10 +75,6 @@ const AIMockInterviewRoom = () => {
   }, [applicationId]);
   
   // Handle interview mode change
-  const handleModeChange = (e) => {
-    setInterviewMode(e.target.value);
-  };
-  
   // Start recording audio with visualization
   const startRecording = async () => {
     // Prevent recording if the interview is already completed
@@ -268,24 +255,7 @@ const AIMockInterviewRoom = () => {
       }
       
       // Send the audio to the server for processing
-      const response = await fetch('http://localhost:5000/api/ai/mock-interview/process-answer', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-      
-      // Log the response status
-      console.log('Response status:', response.status);
-      
-      // Handle network errors
-      if (!response.ok) {
-        const errorType = response.status >= 500 ? 'server' : 'network';
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = await mockInterviewService.processAnswer(formData);
       console.log('Response data:', data);
       
       if (!data.success) {
@@ -298,10 +268,7 @@ const AIMockInterviewRoom = () => {
       // Get the response data
       const {
         transcript,
-        responseType,
         aiResponse,
-        isComplete,
-        shouldMoveToNext,
         feedback,
         interviewCompleted
       } = data.data;
@@ -453,26 +420,10 @@ const AIMockInterviewRoom = () => {
         throw new Error('No valid interview answers found. Please try again.');
       }
       
-      const response = await fetch('http://localhost:5000/api/ai/mock-interview/finalize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          applicationId,
-          answers: validAnswers
-        })
+      const data = await mockInterviewService.finalize({
+        applicationId,
+        answers: validAnswers
       });
-      
-      // Handle network errors
-      if (!response.ok) {
-        const errType = response.status >= 500 ? 'server' : 'network';
-        setErrorType(errType);
-        throw new Error(`Server responded with status: ${response.status}. ${errType === 'server' ? 'Server error occurred.' : 'Network error occurred.'}`);
-      }
-      
-      const data = await response.json();
       
       if (!data.success) {
         setErrorType('server');
@@ -525,27 +476,11 @@ const AIMockInterviewRoom = () => {
       setAnswers([]);
       
       // Fetch initial questions based on job and candidate profile
-      const response = await fetch('http://localhost:5000/api/ai/mock-interview/initialize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          applicationId,
-          interviewMode,
-          questionCount: selectedQuestionCount // Send the selected question count to the backend
-        })
+      const data = await mockInterviewService.initialize({
+        applicationId,
+        interviewMode,
+        questionCount: selectedQuestionCount
       });
-      
-      // Handle network errors
-      if (!response.ok) {
-        const errType = response.status >= 500 ? 'server' : 'network';
-        setErrorType(errType);
-        throw new Error(`Server responded with status: ${response.status}. ${errType === 'server' ? 'Server error occurred.' : 'Network error occurred.'}`);
-      }
-      
-      const data = await response.json();
       
       if (!data.success) {
         setErrorType('server');
@@ -611,7 +546,7 @@ const AIMockInterviewRoom = () => {
   
   // Play audio from URL
   const playQuestionAudio = (audioUrl) => {
-    const audio = new Audio(`http://localhost:5000${audioUrl}`);
+    const audio = new Audio(buildAssetUrl(audioUrl));
     audio.onended = () => {
       // Enable recording when audio finishes
       setIsRecording(false);
@@ -1059,7 +994,7 @@ const AIMockInterviewRoom = () => {
                 <div className="interview-window ai-window">
                   <div className="window-header">
                     <div className="window-title">
-                      <FaRobot style={{ fontSize: '1.2rem' }} /> 
+                      <FaRobot className="window-title-icon" />
                       AI Interviewer
                     </div>
                     <div className="window-controls">
@@ -1295,25 +1230,6 @@ const AIMockInterviewRoom = () => {
                       setFeedback(null);
                       setTranscription('');
                     }}
-                    style={{
-                      background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '50px',
-                      boxShadow: '0 4px 15px rgba(106, 17, 203, 0.3)',
-                      transition: 'all 0.3s ease',
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      margin: '0 10px'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(106, 17, 203, 0.4)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(106, 17, 203, 0.3)';
-                    }}
                   >
                     <FaMicrophone className="me-2" /> Try Again
                   </Button>
@@ -1321,29 +1237,6 @@ const AIMockInterviewRoom = () => {
                   <Link 
                     to="/dashboard/candidate/applications" 
                     className="return-btn feedback-btn"
-                    style={{
-                      background: 'linear-gradient(135deg, #ff9e00 0%, #ff6a00 100%)',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '50px',
-                      boxShadow: '0 4px 15px rgba(255, 158, 0, 0.3)',
-                      transition: 'all 0.3s ease',
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      color: 'white',
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      margin: '0 10px'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(255, 158, 0, 0.4)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 158, 0, 0.3)';
-                    }}
                   >
                     <FaArrowLeft className="me-2" /> Return to Applications
                   </Link>

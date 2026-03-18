@@ -149,18 +149,6 @@ const InterviewFeedback = ({ interviewId, readOnly = false, onFeedbackSubmitted 
     }
   };
   
-  const renderRatingOptions = () => {
-    const options = [];
-    for (let i = 0; i <= 10; i++) {
-      options.push(
-        <option key={i} value={i}>
-          {i} - {getRatingLabel(i)}
-        </option>
-      );
-    }
-    return options;
-  };
-  
   const getRatingLabel = (score) => {
     if (score === 0) return 'Not rated';
     if (score <= 2) return 'Poor';

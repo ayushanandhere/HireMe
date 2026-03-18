@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Table, Spinner, Alert } from 'react-bootstrap';
-import { FaBriefcase, FaPlus, FaEdit, FaTrash, FaEye, FaUsers, FaArrowLeft } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import {
+  FaArrowLeft,
+  FaBriefcase,
+  FaPlus,
+  FaTrash,
+  FaUsers
+} from 'react-icons/fa';
 import { jobService } from '../../services/api';
-import './Dashboard.css';
 import './ManageJobsPage.css';
+
+const getStatusTone = (status = '') => {
+  if (status === 'published') return 'positive';
+  if (status === 'draft') return 'review';
+  if (status === 'closed') return 'alert';
+  return 'active';
+};
 
 const ManageJobsPage = () => {
   const navigate = useNavigate();
@@ -12,7 +23,6 @@ const ManageJobsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteJobId, setDeleteJobId] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
@@ -26,204 +36,171 @@ const ManageJobsPage = () => {
       if (response.success) {
         setJobs(response.data);
       } else {
-        setError(response.message || 'Failed to load jobs');
+        setError(response.message || 'Failed to load jobs.');
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while fetching jobs');
+      setError(err.message || 'An error occurred while fetching jobs.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteClick = (jobId) => {
-    setDeleteJobId(jobId);
-    setShowDeleteConfirm(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deleteJobId) return;
-    
     setDeleteLoading(true);
     try {
       const response = await jobService.deleteJob(deleteJobId);
       if (response.success) {
-        // Remove the deleted job from the state
-        setJobs(jobs.filter(job => job._id !== deleteJobId));
-        setShowDeleteConfirm(false);
+        setJobs((current) => current.filter((job) => job._id !== deleteJobId));
         setDeleteJobId(null);
       } else {
-        setError(response.message || 'Failed to delete job');
+        setError(response.message || 'Failed to delete job.');
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while deleting the job');
+      setError(err.message || 'An error occurred while deleting the job.');
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  const handleDeleteCancel = () => {
-    setShowDeleteConfirm(false);
-    setDeleteJobId(null);
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'published':
-        return <Badge bg="success">Published</Badge>;
-      case 'draft':
-        return <Badge bg="secondary">Draft</Badge>;
-      case 'closed':
-        return <Badge bg="danger">Closed</Badge>;
-      default:
-        return <Badge bg="info">{status}</Badge>;
-    }
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   };
 
+  const publishedJobs = jobs.filter((job) => job.status === 'published').length;
+  const totalApplications = jobs.reduce((sum, job) => sum + (job.applicantCount || 0), 0);
+
   return (
-    <Container className="mjp-container dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">
-          <FaBriefcase className="me-2" /> Manage Jobs
-        </h1>
-        <div>
-          <Button 
-            variant="outline-primary" 
-            onClick={() => navigate('/dashboard/recruiter')}
-            className="me-2 d-flex align-items-center mjp-back-button"
-          >
-            <FaArrowLeft className="me-2" /> Back to Dashboard
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={() => navigate('/dashboard/recruiter/jobs/create')}
-            className="d-flex align-items-center mjp-create-job-button"
-          >
-            <FaPlus className="me-2" /> Create New Job
-          </Button>
-        </div>
-      </div>
-
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      {showDeleteConfirm && (
-        <Alert variant="danger" className="mjp-delete-alert">
-          <Alert.Heading>Confirm Delete</Alert.Heading>
-          {/* Applying mjp-delete-alert to the parent Alert */}
-          <p>Are you sure you want to delete this job? This action cannot be undone.</p>
-          <div className="d-flex justify-content-end">
-            <Button 
-              variant="outline-secondary" 
-              onClick={handleDeleteCancel}
-              className="me-2"
-              disabled={deleteLoading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="danger" 
-              onClick={handleDeleteConfirm}
-              disabled={deleteLoading}
-            >
-              {deleteLoading ? <Spinner size="sm" animation="border" /> : 'Delete'}
-            </Button>
+    <div className="jobs-admin-page page-shell">
+      <section className="jobs-admin-hero">
+        <article className="jobs-admin-hero-copy instrument-card">
+          <span className="eyebrow eyebrow-dark">Recruiter operations</span>
+          <h1>Manage every live role from one control surface.</h1>
+          <p>
+            Track published jobs, pressure on the pipeline, and when to drill into applications or
+            retire a role.
+          </p>
+          <div className="jobs-admin-hero-actions">
+            <button type="button" className="action-link signal" onClick={() => navigate('/dashboard/recruiter')}>
+              <FaArrowLeft /> Back to dashboard
+            </button>
+            <button type="button" className="action-link primary" onClick={() => navigate('/dashboard/recruiter/jobs/create')}>
+              <FaPlus /> Create role
+            </button>
           </div>
-        </Alert>
+        </article>
+
+        <article className="jobs-admin-hero-metrics surface-card">
+          <div className="jobs-admin-metric">
+            <span>Open roles</span>
+            <strong>{publishedJobs}</strong>
+          </div>
+          <div className="jobs-admin-metric">
+            <span>Total roles</span>
+            <strong>{jobs.length}</strong>
+          </div>
+          <div className="jobs-admin-metric">
+            <span>Applications</span>
+            <strong>{totalApplications}</strong>
+          </div>
+        </article>
+      </section>
+
+      {error && <div className="jobs-admin-message error">{error}</div>}
+
+      {deleteJobId && (
+        <section className="jobs-admin-delete surface-card">
+          <div>
+            <span className="eyebrow">Confirm delete</span>
+            <h3>Remove this role permanently?</h3>
+            <p>This action cannot be undone. Associated pipeline context will stop being accessible from this list.</p>
+          </div>
+          <div className="jobs-admin-delete-actions">
+            <button type="button" className="action-link ghost" onClick={() => setDeleteJobId(null)} disabled={deleteLoading}>
+              Cancel
+            </button>
+            <button type="button" className="action-link secondary" onClick={handleDeleteConfirm} disabled={deleteLoading}>
+              {deleteLoading ? 'Deleting...' : 'Delete Role'}
+            </button>
+          </div>
+        </section>
       )}
 
-      <Card className="dashboard-card">
-        <Card.Body>
-          {loading ? (
-            <div className="text-center p-5">
-              <Spinner animation="border" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </Spinner>
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="text-center p-5 mjp-empty-state-card">
-              <p className="mb-4">You haven't created any jobs yet.</p>
-              {/* Applying mjp-empty-state-card to the parent div of this text */}
-              <Button 
-                variant="primary" 
-                onClick={() => navigate('/dashboard/recruiter/jobs/create')}
-              >
-                <FaPlus className="me-2" /> Create Your First Job
-              </Button>
-            </div>
-          ) : (
-            <Table responsive hover className="mjp-jobs-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Company</th>
-                  <th>Status</th>
-                  <th>Posted Date</th>
-                  <th>Applications</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map(job => (
-                  <tr key={job._id}>
-                    <td>{job.title}</td>
-                    <td>{job.company}</td>
-                    <td>{getStatusBadge(job.status)}</td>
-                    <td>{formatDate(job.createdAt)}</td>
-                    <td>
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => navigate(`/dashboard/recruiter/jobs/${job._id}/applications`)}
-                        className="mjp-action-button"
-                      >
-                        <FaUsers className="me-1" /> View Applications
-                      </Button>
-                    </td>
-                    <td>
-                      <div className="d-flex">
-                        <Button 
-                          variant="outline-info" 
-                          size="sm" 
-                          className="me-1 mjp-action-button"
-                          onClick={() => navigate(`/dashboard/recruiter/jobs/${job._id}`)}
-                        >
-                          <FaEye />
-                        </Button>
-                        <Button 
-                          variant="outline-secondary" 
-                          size="sm" 
-                          className="me-1 mjp-action-button"
-                          onClick={() => navigate(`/dashboard/recruiter/jobs/${job._id}/edit`)}
-                        >
-                          <FaEdit />
-                        </Button>
-                        <Button 
-                          variant="outline-danger" 
-                          size="sm"
-                          className="mjp-action-button"
-                          onClick={() => handleDeleteClick(job._id)}
-                        >
-                          <FaTrash />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card.Body>
-      </Card>
-    </Container>
+      <section className="jobs-admin-list surface-card">
+        <div className="jobs-admin-list-head">
+          <div>
+            <span className="eyebrow">Role inventory</span>
+            <h2>Published, draft, and closed jobs</h2>
+          </div>
+          <span className="signal-chip ai">{jobs.length} tracked</span>
+        </div>
+
+        {loading ? (
+          <div className="jobs-admin-loading">Loading jobs...</div>
+        ) : jobs.length === 0 ? (
+          <div className="jobs-admin-empty">
+            <FaBriefcase />
+            <h3>No jobs created yet</h3>
+            <p>Create your first role to start collecting applications and candidate signal.</p>
+            <button type="button" className="action-link primary" onClick={() => navigate('/dashboard/recruiter/jobs/create')}>
+              <FaPlus /> Create First Job
+            </button>
+          </div>
+        ) : (
+          <div className="jobs-admin-grid">
+            {jobs.map((job) => (
+              <article key={job._id} className="job-admin-card">
+                <div className="job-admin-card-head">
+                  <div>
+                    <h3>{job.title}</h3>
+                    <span>{job.company}</span>
+                  </div>
+                  <span className={`signal-chip ${getStatusTone(job.status)}`}>{job.status || 'unknown'}</span>
+                </div>
+
+                <div className="job-admin-meta">
+                  <span>Posted {formatDate(job.createdAt)}</span>
+                  <span>{job.location || 'Location not specified'}</span>
+                </div>
+
+                <div className="job-admin-stats">
+                  <div className="job-admin-stat">
+                    <span>Type</span>
+                    <strong>{job.type || 'N/A'}</strong>
+                  </div>
+                  <div className="job-admin-stat">
+                    <span>Applications</span>
+                    <strong>{job.applicantCount || 0}</strong>
+                  </div>
+                </div>
+
+                <div className="job-admin-actions">
+                  <button
+                    type="button"
+                    className="action-link secondary"
+                    onClick={() => navigate(`/dashboard/recruiter/jobs/${job._id}/applications`)}
+                  >
+                    <FaUsers /> View Applications
+                  </button>
+                  <button
+                    type="button"
+                    className="action-link ghost"
+                    onClick={() => setDeleteJobId(job._id)}
+                  >
+                    <FaTrash /> Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 };
 

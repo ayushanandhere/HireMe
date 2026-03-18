@@ -1,6 +1,18 @@
 const asyncHandler = require('express-async-handler');
 const Job = require('../models/jobModel');
 const AIService = require('../services/aiService');
+const { buildRecruiterPublicPayload } = require('../utils/profileSerializers');
+
+const buildPublicJobPayload = (job) => {
+  const plainJob = typeof job.toObject === 'function' ? job.toObject() : job;
+
+  return {
+    ...plainJob,
+    recruiterProfile: plainJob.recruiter
+      ? buildRecruiterPublicPayload(plainJob.recruiter)
+      : null,
+  };
+};
 
 /**
  * Create a new job posting
@@ -98,6 +110,7 @@ const getJobs = asyncHandler(async (req, res) => {
     
     // Execute query
     const jobs = await Job.find(query)
+      .populate('recruiter', 'name company title location bio companyWebsite companySize industry profilePicturePath')
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
@@ -111,7 +124,7 @@ const getJobs = asyncHandler(async (req, res) => {
       total: totalJobs,
       pages: Math.ceil(totalJobs / parseInt(limit)),
       currentPage: parseInt(page),
-      data: jobs
+      data: jobs.map(buildPublicJobPayload)
     });
   } catch (error) {
     console.error('Error getting jobs:', error);
@@ -129,7 +142,8 @@ const getJobs = asyncHandler(async (req, res) => {
  */
 const getJobById = asyncHandler(async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
+    const job = await Job.findById(req.params.id)
+      .populate('recruiter', 'name company title location bio companyWebsite companySize industry profilePicturePath');
     
     if (!job) {
       res.status(404);
@@ -138,7 +152,7 @@ const getJobById = asyncHandler(async (req, res) => {
     
     res.json({
       success: true,
-      data: job
+      data: buildPublicJobPayload(job)
     });
   } catch (error) {
     console.error('Error getting job:', error);

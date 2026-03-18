@@ -1,9 +1,42 @@
 const Interview = require('../models/interviewModel');
 const Candidate = require('../models/candidateModel');
 const Recruiter = require('../models/recruiterModel');
+const Application = require('../models/applicationModel');
 const mongoose = require('mongoose');
 const { createInterviewRequestNotification, createInterviewStatusNotification, createFeedbackNotification } = require('./notificationController');
-const { io } = require('../server');
+const { APPLICATION_STAGES, transitionApplication } = require('../utils/applicationStages');
+
+const INTERVIEW_STATUS_LABELS = {
+  pending: 'Pending response',
+  accepted: 'Accepted',
+  rejected: 'Declined',
+  completed: 'Completed',
+  cancelled: 'Cancelled'
+};
+
+const serializeInterview = (interview) => {
+  if (!interview) {
+    return null;
+  }
+
+  const source = typeof interview.toObject === 'function'
+    ? interview.toObject({ virtuals: true })
+    : { ...interview };
+
+  return {
+    ...source,
+    statusLabel: INTERVIEW_STATUS_LABELS[source.status] || 'Unknown status'
+  };
+};
+
+const emitSocketEvent = (roomId, eventName, payload) => {
+  if (!global.io) {
+    console.warn(`Socket.io not available to emit ${eventName}`);
+    return;
+  }
+
+  global.io.to(roomId).emit(eventName, payload);
+};
 
 /**
  * Create a new interview request
@@ -49,6 +82,21 @@ const createInterview = async (req, res) => {
       status: 'pending',
       applicationId: req.body.applicationId || null // Save the applicationId if provided
     });
+
+    if (interview.applicationId) {
+      const application = await Application.findById(interview.applicationId).populate('job');
+      if (application && application.job.recruiter.toString() === req.user._id.toString()) {
+        try {
+          transitionApplication(application, APPLICATION_STAGES.INTERVIEW_SCHEDULED, {
+            notes: `Interview scheduled for ${new Date(scheduledDateTime).toLocaleString()}`,
+            updatedBy: req.user._id
+          });
+          await application.save();
+        } catch (transitionError) {
+          console.warn('Unable to transition application to interview_scheduled:', transitionError.message);
+        }
+      }
+    }
     
     // Populate the interview with candidate and recruiter data
     const populatedInterview = await Interview.findById(interview._id)
@@ -66,20 +114,18 @@ const createInterview = async (req, res) => {
     // ---> ADDED: Emit socket event to the specific candidate <---
     // Assumes candidate model has a 'user' field linking to the User model _id
     // Also assumes the frontend client joins a room 'user-<userId>' upon connection
-    if (populatedInterview.candidate && populatedInterview.candidate.user) {
-       const candidateUserId = populatedInterview.candidate.user.toString();
-       io.to(`user-${candidateUserId}`).emit('new_interview_request', populatedInterview);
-       console.log(`Emitted 'new_interview_request' to user room: user-${candidateUserId}`);
+    if (populatedInterview.candidate) {
+       const candidateRoomId = populatedInterview.candidate._id.toString();
+       emitSocketEvent(`user-${candidateRoomId}`, 'new_interview_request', serializeInterview(populatedInterview));
+       console.log(`Emitted 'new_interview_request' to user room: user-${candidateRoomId}`);
     } else {
-       console.warn('Could not emit new_interview_request: Candidate or candidate.user field missing/not populated.');
-       // Attempt to populate candidate.user if necessary - requires schema change if 'user' field doesn't exist
-       // Or adjust logic to find the correct user ID if the structure is different
+       console.warn('Could not emit new_interview_request: Candidate missing on populated interview.');
     }
     // ---> END ADDED <---
     
     res.status(201).json({
       success: true,
-      data: populatedInterview,
+      data: serializeInterview(populatedInterview),
       message: 'Interview request created successfully'
     });
   } catch (error) {
@@ -104,7 +150,7 @@ const getRecruiterInterviews = async (req, res) => {
     
     res.json({
       success: true,
-      data: interviews
+      data: interviews.map(serializeInterview)
     });
   } catch (error) {
     console.error('Error fetching recruiter interviews:', error);
@@ -128,7 +174,7 @@ const getCandidateInterviews = async (req, res) => {
     
     res.json({
       success: true,
-      data: interviews
+      data: interviews.map(serializeInterview)
     });
   } catch (error) {
     console.error('Error fetching candidate interviews:', error);
@@ -213,28 +259,34 @@ const updateInterviewStatus = async (req, res) => {
     }
     
     // If cancelling, update the associated application status
-    if (status === 'cancelled' && interview.applicationId) {
+    if (interview.applicationId) {
       try {
-        // Import the Application model
-        const Application = require('../models/applicationModel');
-        
-        // Find and update the application
         const application = await Application.findById(interview.applicationId);
-        
+
         if (application) {
-          // Update the application stage to 'interview_cancelled'
-          application.stage = 'interview_cancelled';
-          
-          // Add to history
-          application.history.push({
-            stage: 'interview_cancelled',
-            timestamp: Date.now(),
-            notes: 'Interview was cancelled by the recruiter',
-            updatedBy: req.user._id
-          });
-          
+          if (status === 'cancelled') {
+            transitionApplication(application, APPLICATION_STAGES.INTERVIEW_CANCELLED, {
+              notes: 'Interview was cancelled by the recruiter',
+              updatedBy: req.user._id
+            });
+          }
+
+          if (status === 'completed') {
+            transitionApplication(application, APPLICATION_STAGES.INTERVIEW_COMPLETED, {
+              notes: 'Interview completed and feedback is available',
+              updatedBy: req.user._id
+            });
+          }
+
+          if (status === 'rejected') {
+            transitionApplication(application, APPLICATION_STAGES.REJECTED, {
+              notes: 'Candidate declined the interview request',
+              updatedBy: req.user._id
+            });
+          }
+
           await application.save();
-          console.log(`Updated application ${application._id} stage to interview_cancelled`);
+          console.log(`Updated application ${application._id} after interview status change`);
         }
       } catch (appError) {
         console.error('Error updating application stage:', appError);
@@ -247,8 +299,8 @@ const updateInterviewStatus = async (req, res) => {
     // Populate data for notification and socket emission
     // Ensure 'user' field is populated if it exists on Candidate/Recruiter models
     const populatedInterview = await Interview.findById(req.params.id)
-      .populate('candidate', 'name email user')
-      .populate('recruiter', 'name email company user')
+      .populate('candidate', 'name email')
+      .populate('recruiter', 'name email company')
       .populate('applicationId');
 
     // Create notification based on status change
@@ -263,26 +315,26 @@ const updateInterviewStatus = async (req, res) => {
     // ---> ADDED: Emit socket event to both candidate and recruiter <---
     // Assumes candidate/recruiter models have a 'user' field linking to the User model _id
     // Also assumes the frontend client joins a room 'user-<userId>' upon connection
-    if (populatedInterview.candidate && populatedInterview.candidate.user) {
-        const candidateUserId = populatedInterview.candidate.user.toString();
-        io.to(`user-${candidateUserId}`).emit('interview_status_update', populatedInterview);
-        console.log(`Emitted 'interview_status_update' to candidate room: user-${candidateUserId}`);
+    if (populatedInterview.candidate) {
+        const candidateRoomId = populatedInterview.candidate._id.toString();
+        emitSocketEvent(`user-${candidateRoomId}`, 'interview_status_update', serializeInterview(populatedInterview));
+        console.log(`Emitted 'interview_status_update' to candidate room: user-${candidateRoomId}`);
     } else {
-      console.warn('Could not emit interview_status_update to candidate: Candidate or candidate.user field missing/not populated.');
+      console.warn('Could not emit interview_status_update to candidate: Candidate missing.');
     }
 
-    if (populatedInterview.recruiter && populatedInterview.recruiter.user) {
-        const recruiterUserId = populatedInterview.recruiter.user.toString();
-        io.to(`user-${recruiterUserId}`).emit('interview_status_update', populatedInterview);
-        console.log(`Emitted 'interview_status_update' to recruiter room: user-${recruiterUserId}`);
+    if (populatedInterview.recruiter) {
+        const recruiterRoomId = populatedInterview.recruiter._id.toString();
+        emitSocketEvent(`user-${recruiterRoomId}`, 'interview_status_update', serializeInterview(populatedInterview));
+        console.log(`Emitted 'interview_status_update' to recruiter room: user-${recruiterRoomId}`);
     } else {
-      console.warn('Could not emit interview_status_update to recruiter: Recruiter or recruiter.user field missing/not populated.');
+      console.warn('Could not emit interview_status_update to recruiter: Recruiter missing.');
     }
     // ---> END ADDED <---
 
     res.json({
       success: true,
-      data: populatedInterview,
+      data: serializeInterview(populatedInterview),
       message: `Interview ${status} successfully`
     });
   } catch (error) {
@@ -336,10 +388,25 @@ const addInterviewFeedback = async (req, res) => {
     }
     
     await interview.save();
+
+    if (interview.applicationId) {
+      try {
+        const application = await Application.findById(interview.applicationId);
+        if (application) {
+          transitionApplication(application, APPLICATION_STAGES.INTERVIEW_COMPLETED, {
+            notes: 'Interview feedback submitted by recruiter',
+            updatedBy: req.user._id
+          });
+          await application.save();
+        }
+      } catch (applicationError) {
+        console.warn('Unable to update application after feedback submission:', applicationError.message);
+      }
+    }
     
     res.json({
       success: true,
-      data: interview,
+      data: serializeInterview(interview),
       message: 'Feedback added successfully'
     });
   } catch (error) {
@@ -401,7 +468,7 @@ const getInterviewById = async (req, res) => {
     
     res.json({
       success: true,
-      data: interview
+      data: serializeInterview(interview)
     });
   } catch (error) {
     console.error('Error fetching interview:', error);
@@ -484,6 +551,21 @@ const submitFeedback = async (req, res) => {
     }
     
     await interview.save();
+
+    if (interview.applicationId) {
+      try {
+        const application = await Application.findById(interview.applicationId);
+        if (application) {
+          transitionApplication(application, APPLICATION_STAGES.INTERVIEW_COMPLETED, {
+            notes: 'Interview completed and scored by recruiter',
+            updatedBy: req.user._id
+          });
+          await application.save();
+        }
+      } catch (applicationError) {
+        console.warn('Unable to update application after feedback scoring:', applicationError.message);
+      }
+    }
     
     res.status(200).json({
       success: true,
@@ -622,7 +704,7 @@ const updateFeedbackVisibility = async (req, res) => {
     
     res.json({
       success: true,
-      data: updatedInterview,
+      data: serializeInterview(updatedInterview),
       message: `Feedback is now ${isShared ? 'visible' : 'hidden'} to the candidate`
     });
   } catch (error) {

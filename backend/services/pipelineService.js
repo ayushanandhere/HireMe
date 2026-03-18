@@ -6,20 +6,7 @@
 const Candidate = require('../models/candidateModel');
 const Job = require('../models/jobModel');
 const AIService = require('./aiService');
-
-// Define pipeline stages
-const PIPELINE_STAGES = {
-  NEW: 'new_application',
-  SCREENED: 'resume_screened',
-  MATCHED: 'job_matched',
-  INTERVIEW_REQUESTED: 'interview_requested',
-  INTERVIEW_SCHEDULED: 'interview_scheduled',
-  INTERVIEW_COMPLETED: 'interview_completed',
-  OFFER_EXTENDED: 'offer_extended',
-  OFFER_ACCEPTED: 'offer_accepted',
-  REJECTED: 'rejected',
-  WITHDRAWN: 'withdrawn'
-};
+const { APPLICATION_STAGES } = require('../utils/applicationStages');
 
 class PipelineService {
   /**
@@ -47,10 +34,10 @@ class PipelineService {
         jobId: job._id,
         jobTitle: job.title,
         company: job.company,
-        stage: PIPELINE_STAGES.NEW,
+        stage: APPLICATION_STAGES.NEW,
         history: [
           {
-            stage: PIPELINE_STAGES.NEW,
+            stage: APPLICATION_STAGES.NEW,
             timestamp: new Date(),
             notes: 'Application received'
           }
@@ -150,16 +137,16 @@ class PipelineService {
       // For this example, return mock data
       return {
         stageCounts: {
-          [PIPELINE_STAGES.NEW]: 0,
-          [PIPELINE_STAGES.SCREENED]: 0,
-          [PIPELINE_STAGES.MATCHED]: 0,
-          [PIPELINE_STAGES.INTERVIEW_REQUESTED]: 0,
-          [PIPELINE_STAGES.INTERVIEW_SCHEDULED]: 0,
-          [PIPELINE_STAGES.INTERVIEW_COMPLETED]: 0,
-          [PIPELINE_STAGES.OFFER_EXTENDED]: 0,
-          [PIPELINE_STAGES.OFFER_ACCEPTED]: 0,
-          [PIPELINE_STAGES.REJECTED]: 0,
-          [PIPELINE_STAGES.WITHDRAWN]: 0
+          [APPLICATION_STAGES.NEW]: 0,
+          [APPLICATION_STAGES.SCREENED]: 0,
+          [APPLICATION_STAGES.MATCHED]: 0,
+          [APPLICATION_STAGES.INTERVIEW_REQUESTED]: 0,
+          [APPLICATION_STAGES.INTERVIEW_SCHEDULED]: 0,
+          [APPLICATION_STAGES.INTERVIEW_COMPLETED]: 0,
+          [APPLICATION_STAGES.OFFER_EXTENDED]: 0,
+          [APPLICATION_STAGES.OFFER_ACCEPTED]: 0,
+          [APPLICATION_STAGES.REJECTED]: 0,
+          [APPLICATION_STAGES.WITHDRAWN]: 0
         },
         conversionRates: {
           application_to_interview: 0,
@@ -168,11 +155,11 @@ class PipelineService {
           overall_conversion: 0
         },
         averageTimeInStage: {
-          [PIPELINE_STAGES.NEW]: 0,
-          [PIPELINE_STAGES.SCREENED]: 0,
-          [PIPELINE_STAGES.MATCHED]: 0,
-          [PIPELINE_STAGES.INTERVIEW_REQUESTED]: 0,
-          [PIPELINE_STAGES.INTERVIEW_SCHEDULED]: 0
+          [APPLICATION_STAGES.NEW]: 0,
+          [APPLICATION_STAGES.SCREENED]: 0,
+          [APPLICATION_STAGES.MATCHED]: 0,
+          [APPLICATION_STAGES.INTERVIEW_REQUESTED]: 0,
+          [APPLICATION_STAGES.INTERVIEW_SCHEDULED]: 0
         }
       };
     } catch (error) {
@@ -182,4 +169,4 @@ class PipelineService {
   }
 }
 
-module.exports = new PipelineService(); 
+module.exports = new PipelineService();

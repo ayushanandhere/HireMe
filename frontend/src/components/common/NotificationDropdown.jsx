@@ -6,7 +6,6 @@ import '../../styles/NotificationDropdown.css';
 
 const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasError, setHasError] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   
@@ -19,6 +18,7 @@ const NotificationDropdown = () => {
   let markAllAsRead = () => {};
   let deleteNotification = () => {};
   
+  let hasError = false;
   try {
     const context = useNotifications();
     if (context) {
@@ -30,11 +30,11 @@ const NotificationDropdown = () => {
       markAllAsRead = context.markAllAsRead || (() => {});
       deleteNotification = context.deleteNotification || (() => {});
     } else {
-      setHasError(true);
+      hasError = true;
     }
   } catch (err) {
     console.error('Error accessing notification context:', err);
-    setHasError(true);
+    hasError = true;
   }
 
   // Close dropdown when clicking outside

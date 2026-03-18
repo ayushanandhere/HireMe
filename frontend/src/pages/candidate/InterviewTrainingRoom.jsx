@@ -4,54 +4,8 @@ import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Badge, Progres
 import { FaArrowLeft, FaUser, FaPaperPlane, FaRobot, FaVideo, FaFileAlt, FaBriefcase, FaGraduationCap, FaBuilding, FaMapMarkerAlt, FaCalendarAlt, FaChartLine, FaCheck, FaTimes, FaLightbulb, FaCode, FaUserTie, FaInfoCircle, FaQuestionCircle, FaStar, FaClipboardCheck, FaComments, FaCheckCircle, FaExclamationTriangle, FaBrain, FaBook, FaLaptopCode, FaHandshake } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { interviewService } from '../../services/api';
-import openaiService from '../../services/openaiService';
+import { aiTrainingService, applicationService, interviewService } from '../../services/api';
 import './InterviewTrainingRoom.css';
-
-// Helper function to determine progress bar variant based on score
-const getProgressBarVariant = (score) => {
-  if (score >= 80) return 'success';
-  if (score >= 60) return 'info';
-  if (score >= 40) return 'warning';
-  return 'danger';
-};
-
-// Helper function to get a color for skill badges based on category
-const getSkillBadgeColor = (category) => {
-  const categories = {
-    'programming': { bg: '#4361ee', text: 'white' },
-    'framework': { bg: '#00b4d8', text: 'white' },
-    'database': { bg: '#6c757d', text: 'white' },
-    'cloud': { bg: '#343a40', text: 'white' },
-    'tool': { bg: '#4cc9f0', text: 'white' },
-    'soft': { bg: '#ff9e00', text: 'white' },
-    'api': { bg: '#00afb9', text: 'white' },
-    'architecture': { bg: '#7209b7', text: 'white' },
-    'default': { bg: '#4895ef', text: 'white' }
-  };
-  return categories[category] || categories.default;
-};
-
-// Helper function to categorize skills (improved version)
-const categorizeSkill = (skill) => {
-  skill = skill.toLowerCase();
-  if (['javascript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'swift', 'kotlin', 'typescript'].some(lang => skill.includes(lang))) {
-    return 'programming';
-  }
-  if (['react', 'angular', 'vue', 'django', 'flask', 'spring', 'express', 'laravel', 'rails', 'node.js', 'spring boot'].some(fw => skill.includes(fw))) {
-    return 'framework';
-  }
-  if (['sql', 'mysql', 'postgresql', 'mongodb', 'oracle', 'firebase', 'dynamodb', 'redis', 'nosql', 'database'].some(db => skill.includes(db))) {
-    return 'database';
-  }
-  if (['aws', 'azure', 'gcp', 'cloud', 'docker', 'kubernetes', 'serverless', 'devops'].some(cl => skill.includes(cl))) {
-    return 'cloud';
-  }
-  if (['git', 'jenkins', 'jira', 'agile', 'scrum', 'ci/cd', 'testing', 'postman', 'swagger'].some(tool => skill.includes(tool))) {
-    return 'tool';
-  }
-  return 'default';
-};
 
 const InterviewTrainingRoom = () => {
   const { applicationId } = useParams();
@@ -59,15 +13,14 @@ const InterviewTrainingRoom = () => {
   const messagesEndRef = useRef(null);
   
   const [loading, setLoading] = useState(true);
-  const [initializing, setInitializing] = useState(true);
+  const [_initializing, setInitializing] = useState(true);
   const [error, setError] = useState(null);
   const [application, setApplication] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat');
   const [responseMode, setResponseMode] = useState('normal'); // 'normal' or 'deep'
-  const [suggestedQuestions, setSuggestedQuestions] = useState([
+  const [suggestedQuestions] = useState([
     "What skills should I focus on for this job?",
     "What technical questions might I be asked in the interview?",
     "How can I improve my chances of getting this job?",
@@ -80,7 +33,7 @@ const InterviewTrainingRoom = () => {
   ]);
   
   // State for resume analysis data
-  const [resumeAnalysisData, setResumeAnalysisData] = useState(null);
+  const [, setResumeAnalysisData] = useState(null);
 
   // Fetch application data and initialize AI assistant
   useEffect(() => {
@@ -91,32 +44,20 @@ const InterviewTrainingRoom = () => {
         // First, check if this is an interview ID rather than an application ID
         // by trying to fetch the interview data
         try {
-          const interviewResponse = await fetch(`http://localhost:5000/api/interviews/${applicationId}`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          
-          const interviewData = await interviewResponse.json();
+          const interviewData = await interviewService.getInterviewById(applicationId);
           
           if (interviewData.success && interviewData.data && interviewData.data.applicationId) {
             // If this is an interview, redirect to the application training page
             navigate(`/application/${interviewData.data.applicationId._id}/training`);
             return;
           }
-        } catch (interviewErr) {
+        } catch {
           // If we can't fetch the interview, continue trying to fetch the application
           console.log('Not an interview ID, continuing to fetch application');
         }
         
         // Fetch application details
-        const response = await fetch(`http://localhost:5000/api/applications/${applicationId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
-        const applicationData = await response.json();
+        const applicationData = await applicationService.getApplicationById(applicationId);
         
         if (!applicationData.success) {
           throw new Error(applicationData.message || 'Failed to load application details');
@@ -143,13 +84,7 @@ const InterviewTrainingRoom = () => {
         }
         
         // Initialize AI assistant with context
-        const contextResponse = await fetch(`http://localhost:5000/api/ai/training-context/${applicationId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
-        const contextData = await contextResponse.json();
+        const contextData = await aiTrainingService.getTrainingContext(applicationId);
         
         if (contextData.success) {
           // Add the AI's initial message
@@ -205,20 +140,11 @@ const InterviewTrainingRoom = () => {
     
     try {
       // Send message to AI assistant
-      const response = await fetch(`http://localhost:5000/api/ai/training-assistant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          applicationId,
-          responseMode: responseMode // 'normal' or 'deep'
-        })
+      const data = await aiTrainingService.sendTrainingMessage({
+        message: userMessage,
+        applicationId,
+        responseMode
       });
-      
-      const data = await response.json();
       
       if (data.success) {
         // Add AI response to chat
@@ -301,6 +227,7 @@ const InterviewTrainingRoom = () => {
       <div className="chat-sidebar">
         <div className="sidebar-header">
           <div className="sidebar-title-container">
+            <span className="eyebrow eyebrow-dark">Training room</span>
             <h2 className="sidebar-title">AI Interview Training</h2>
           </div>
         </div>

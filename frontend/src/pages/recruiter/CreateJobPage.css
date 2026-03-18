@@ -1,286 +1,236 @@
-/* Styles for CreateJobPage */
-
-.cjp-container.dashboard-container {
-  background-color: #fff5ee;
-  padding: 25px;
-  min-height: 100vh; /* Ensure it takes full height */
+.job-creation-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-inline: 1.1rem;
 }
 
-/* Page Header Styling */
-.cjp-container .dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 40px;
-  padding: 2.5rem 2rem;
-  background: linear-gradient(135deg, #1b024e, #7cbced);
-  border-radius: 15px;
-  color: #fff; 
-  box-shadow: 0 10px 20px rgba(255, 107, 53, 0.15);
-  position: relative;
-  overflow: hidden;
+.job-creation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.7fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.cjp-container .dashboard-header::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
-  transform: rotate(30deg);
-  pointer-events: none;
+.job-creation-hero-copy,
+.job-creation-company,
+.job-creation-guide,
+.job-creation-form {
+  padding: 1.35rem;
 }
 
-.cjp-container .dashboard-header .dashboard-title {
-  font-size: 2.8rem;
-  font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+.job-creation-hero-copy h1 {
+  margin: 0.6rem 0 0;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.job-creation-hero-copy p {
+  margin: 0.9rem 0 0;
+  color: rgba(226, 232, 240, 0.78);
+  line-height: 1.7;
+  max-width: 42rem;
+}
+
+.job-creation-hero-actions {
+  margin-top: 1.2rem;
+}
+
+.job-creation-company {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.job-creation-company-mark {
+  width: 3.6rem;
+  height: 3.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1rem;
+  background: rgba(8, 145, 178, 0.08);
+  color: var(--signal-ai-deep);
+  font-size: 1.5rem;
+}
+
+.job-creation-company strong {
+  font-size: 1.15rem;
+  color: var(--text-strong);
+}
+
+.job-creation-company p {
   margin: 0;
-  display: flex;
-  align-items: center;
-  position: relative;
-  z-index: 1;
+  color: var(--text-muted);
+  line-height: 1.65;
 }
 
-.cjp-container .dashboard-header .dashboard-title svg {
-  color: #ffffff !important; /* Ensure icon is white */
-  margin-right: 0.75rem;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+.job-creation-message {
+  margin-bottom: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  line-height: 1.6;
 }
 
-.cjp-container .dashboard-header .btn-outline-primary {
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  padding: 0.8rem 1.5rem;
-  border-radius: 50px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+.job-creation-message.error {
+  background: rgba(242, 85, 85, 0.08);
+  border-color: rgba(242, 85, 85, 0.14);
+  color: #b42318;
 }
 
-.cjp-container .dashboard-header .btn-outline-primary:hover {
-  background-color: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.6);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+.job-creation-message.success {
+  background: rgba(18, 214, 160, 0.08);
+  border-color: rgba(18, 214, 160, 0.14);
+  color: #0b7c61;
 }
 
-/* Company Info Card */
-.cjp-company-card.card {
-  background: linear-gradient(135deg, #FFAA80, #FF8C42) !important;
-  color: #ffffff;
-  border-radius: 15px;
-  padding: 2rem; /* Increased padding */
-  margin-bottom: 2.5rem !important;
-  border: none;
-  box-shadow: 0 10px 25px rgba(255, 140, 66, 0.2);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.cjp-company-card.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 30px rgba(255, 140, 66, 0.3);
-}
-
-.cjp-company-card.card::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 150px;
-  height: 150px;
-  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.cjp-company-card.card .card-body {
-  padding: 0.5rem; /* Reduce body padding if card has padding */
-  position: relative;
-  z-index: 1;
-}
-
-.cjp-company-card h4 {
-  color: #ffffff;
-  font-weight: 700;
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.cjp-company-card p.text-muted {
-  color: rgba(255, 255, 255, 0.9) !important; /* Override Bootstrap's text-muted */
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.cjp-company-card svg {
-  font-size: 3rem !important; /* Larger icon */
-  color: #ffffff !important; /* White icon */
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.2));
-}
-
-/* Main Form Card */
-.cjp-form-card.dashboard-card {
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  padding: 2.5rem; /* Add padding to the card itself */
-  border: none;
-  background-color: #ffffff;
-  margin-bottom: 2rem;
-}
-
-.cjp-form-card.dashboard-card .card-body {
-  padding: 0; /* Remove default card-body padding if card has padding */
-}
-
-/* Form Elements */
-.cjp-form-card .form-label {
-  color: #663300; /* Dark brown text for labels */
-  font-weight: 600;
-  font-size: 1.1rem; /* Slightly larger for better readability */
-  margin-bottom: 0.75rem;
-  display: flex;
-  align-items: center;
-}
-
-.cjp-form-card .form-label strong {
-  font-weight: 700; /* Bolder text */
-  color: #994D00; /* Darker orange for emphasis */
-}
-
-.cjp-form-card .form-label .text-primary {
-  color: #FF8C42 !important; /* Orange accent color for icons */
-  margin-right: 0.75rem;
-  font-size: 1.4rem;
-  filter: drop-shadow(0 1px 2px rgba(255, 107, 53, 0.2));
-}
-
-.cjp-form-card .form-control,
-.cjp-form-card .form-select {
-  border: 1px solid #FFD1B3;
-  background-color: #FFFAF5;
-  color: #663300;
-  padding: 0.9rem 1.2rem;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
-}
-
-.cjp-form-card .form-control-lg,
-.cjp-form-card .form-select-lg {
-  padding: 1rem 1.2rem;
-  font-size: 1.1rem;
-  font-weight: 500;
-}
-
-.cjp-form-card .form-control:focus,
-.cjp-form-card .form-select:focus {
-  border-color: #FF8C42;
-  box-shadow: 0 0 0 0.25rem rgba(255, 140, 66, 0.25);
-  background-color: #ffffff;
-}
-
-.cjp-form-card .form-control::placeholder {
-  color: #BF9270;
-  opacity: 0.7;
-}
-
-.cjp-form-card .form-text {
-  color: #994D00;
-  font-size: 0.9rem;
-  margin-top: 0.75rem;
-  font-weight: 500;
-}
-
-/* Form Actions */
-.cjp-form-actions {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid #FFE0CC;
-  display: flex;
-  justify-content: flex-end;
+.job-creation-grid {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.7fr) minmax(0, 1.35fr);
   gap: 1rem;
 }
 
-.cjp-submit-button {
-  padding: 0.9rem 2.5rem;
+.job-creation-guide {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.job-guide-block h3 {
+  margin: 0.6rem 0 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.job-guide-block p,
+.job-guide-item span {
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.job-guide-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.job-guide-item {
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.job-guide-item strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--text-strong);
+}
+
+.job-creation-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.job-form-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.job-form-section-head h2 {
+  margin: 0.55rem 0 0;
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+}
+
+.job-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.job-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.job-field-full {
+  grid-column: 1 / -1;
+}
+
+.job-field span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-strong);
   font-weight: 700;
-  border-radius: 50px;
-  background: linear-gradient(135deg, #FF8C42, #FF6B35);
-  border-color: transparent;
-  box-shadow: 0 8px 15px rgba(255, 107, 53, 0.25);
-  transition: all 0.3s ease;
-  color: white;
-  font-size: 1.1rem;
-  letter-spacing: 0.5px;
+  font-size: 0.92rem;
 }
 
-.cjp-submit-button:hover {
-  background: linear-gradient(135deg, #FF6B35, #FF5722);
-  border-color: transparent;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(255, 107, 53, 0.35);
+.job-field input,
+.job-field select,
+.job-field textarea {
+  width: 100%;
+  min-height: 3.1rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 252, 0.88);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+  resize: vertical;
 }
 
-.cjp-cancel-button.btn-secondary {
-  background-color: transparent;
-  border: 2px solid #FF8C42;
-  color: #FF6B35;
-  padding: 0.85rem 2rem;
-  border-radius: 50px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  font-size: 1.1rem;
+.job-field textarea {
+  min-height: 10rem;
 }
 
-.cjp-cancel-button.btn-secondary:hover {
-  background-color: rgba(255, 140, 66, 0.1);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(255, 107, 53, 0.15);
+.job-field input:focus,
+.job-field select:focus,
+.job-field textarea:focus {
+  outline: 0;
+  border-color: rgba(8, 145, 178, 0.35);
+  box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.08);
 }
 
-.cjp-submit-button.btn-primary:disabled {
-  background-color: #95a5a6 !important;
-  border-color: #95a5a6 !important;
+.job-field small {
+  color: var(--text-soft);
+  line-height: 1.55;
 }
 
-.cjp-form-actions {
-  /* Parent div for buttons, d-flex justify-content-end is already on it */
-  gap: 1rem; /* Adds space between buttons if they wrap or for general spacing */
+.job-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
-.cjp-cancel-button.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  color: #ffffff;
-  padding: 0.75rem 1.5rem; /* Consistent padding with submit */
-  font-size: 1.1rem; /* Consistent font size */
-  font-weight: 600; /* Consistent font weight */
-  border-radius: 6px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+@media (max-width: 980px) {
+  .job-creation-hero,
+  .job-creation-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.cjp-cancel-button.btn-secondary:hover {
-  background-color: #5a6268;
-  border-color: #545b62;
-}
+@media (max-width: 720px) {
+  .job-creation-page {
+    padding-inline: 0.85rem;
+  }
 
-/* Ensure cjp-submit-button styles are not negatively impacted */
-/* (Styles for cjp-submit-button are already defined below this section) */
+  .job-creation-hero-copy,
+  .job-creation-company,
+  .job-creation-guide,
+  .job-creation-form {
+    padding: 1rem;
+  }
 
-/* Alert messages */
-.cjp-form-card .alert {
-  border-radius: 6px;
-  font-size: 0.95rem;
+  .job-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .job-form-actions {
+    flex-direction: column;
+  }
+
+  .job-form-actions > * {
+    width: 100%;
+  }
 }

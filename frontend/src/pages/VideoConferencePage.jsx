@@ -1,60 +1,97 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  FiActivity,
+  FiArrowLeft,
+  FiCalendar,
+  FiClock,
+  FiShield,
+  FiUser,
+  FiVideo
+} from 'react-icons/fi';
 import VideoChat from '../components/VideoChat';
 import InterviewFeedback from '../components/InterviewFeedback';
-import { interviewService, authService } from '../services/api';
+import { authService, interviewService } from '../services/api';
 import '../styles/VideoConference.css';
+
+const formatDateTime = (dateString) => {
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  };
+
+  return new Date(dateString).toLocaleDateString(undefined, options);
+};
+
+const getStatusTone = (status) => {
+  switch (status) {
+    case 'accepted':
+    case 'scheduled':
+      return 'positive';
+    case 'completed':
+      return 'active';
+    case 'pending':
+      return 'review';
+    case 'cancelled':
+    case 'rejected':
+      return 'alert';
+    default:
+      return 'ai';
+  }
+};
+
+const capitalizeStatus = (status = '') => {
+  if (!status) return 'Unknown';
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
 
 const VideoConferencePage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  
+
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userType, setUserType] = useState('');
   const [userName, setUserName] = useState('');
-  
+
   useEffect(() => {
     const fetchInterviewData = async () => {
       try {
-        // Check if user is authenticated
         if (!authService.isAuthenticated()) {
-          setError('User authentication required');
+          setError('User authentication required.');
           setLoading(false);
           return;
         }
 
-        // Get user info
         const userInfo = authService.getUser();
         const userRole = authService.getUserRole();
-        
+
         if (!userInfo) {
-          setError('User information not found. Please login again.');
+          setError('User information not found. Please sign in again.');
           setLoading(false);
           return;
         }
-        
-        // Set user type and name
+
         setUserType(userRole || '');
         setUserName(userInfo.name || userInfo.email || 'User');
-        
-        console.log('User authenticated:', userRole, userInfo.name);
-        
-        // Fetch interview details
+
         if (!interviewId) {
-          setError('Interview ID is required');
+          setError('Interview ID is required.');
           setLoading(false);
           return;
         }
-        
+
         const response = await interviewService.getInterviewById(interviewId);
-        
-        if (response && response.success) {
-          console.log('Interview data loaded successfully');
+
+        if (response?.success) {
           setInterview(response.data);
         } else {
-          setError('Failed to load interview details');
+          setError('Failed to load interview details.');
         }
       } catch (err) {
         console.error('Error in video conference setup:', err);
@@ -63,67 +100,72 @@ const VideoConferencePage = () => {
         setLoading(false);
       }
     };
-    
+
     fetchInterviewData();
   }, [interviewId]);
-  
-  // Handle case when interview is loading
+
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
+      <div className="conference-shell page-shell">
+        <div className="container">
+          <div className="conference-state-card instrument-card">
+            <span className="eyebrow eyebrow-dark">Room Setup</span>
+            <h1>Preparing the interview room.</h1>
+            <p>
+              We are checking access, loading meeting context, and getting the conference
+              surfaces ready for the session.
+            </p>
+            <div className="conference-loading-bar" aria-hidden="true">
+              <span />
+            </div>
+          </div>
         </div>
-        <h3 className="mt-3 mb-2">Setting up your conference...</h3>
-        <p className="text-muted">Preparing your virtual interview room</p>
       </div>
     );
   }
-  
-  // Handle case when there's an error
+
   if (error) {
     return (
-      <div className="error-container">
-        <div className="alert alert-danger" role="alert">
-          <h4 className="alert-heading mb-2">Connection Error</h4>
-          <p>{error}</p>
+      <div className="conference-shell page-shell">
+        <div className="container">
+          <div className="conference-state-card surface-card conference-state-card-light">
+            <span className="signal-chip alert">Connection issue</span>
+            <h1>Unable to open the interview room.</h1>
+            <p>{error}</p>
+            <div className="conference-state-actions">
+              <button type="button" className="action-link primary" onClick={() => navigate(-1)}>
+                <FiArrowLeft />
+                Go back
+              </button>
+            </div>
+          </div>
         </div>
-        <button className="btn btn-primary px-4 py-2" onClick={() => navigate(-1)}>
-          Go Back
-        </button>
       </div>
     );
   }
-  
-  // Handle case when interview is not found
+
   if (!interview) {
     return (
-      <div className="error-container">
-        <div className="alert alert-warning" role="alert">
-          <h4 className="alert-heading mb-2">Interview Not Found</h4>
-          <p>The interview you're looking for doesn't exist or you don't have permission to access it.</p>
+      <div className="conference-shell page-shell">
+        <div className="container">
+          <div className="conference-state-card surface-card conference-state-card-light">
+            <span className="signal-chip review">Unavailable</span>
+            <h1>Interview not found.</h1>
+            <p>
+              This session may have been removed or you may not have permission to access it.
+            </p>
+            <div className="conference-state-actions">
+              <button type="button" className="action-link primary" onClick={() => navigate(-1)}>
+                <FiArrowLeft />
+                Return to previous screen
+              </button>
+            </div>
+          </div>
         </div>
-        <button className="btn btn-primary px-4 py-2" onClick={() => navigate(-1)}>
-          Go Back
-        </button>
       </div>
     );
   }
-  
-  // Format date nicely
-  const formatDateTime = (dateString) => {
-    const options = { 
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-  
-  // Extract relevant information from the interview
+
   const interviewInfo = {
     candidateName: interview.candidate?.name || 'Candidate',
     recruiterName: interview.recruiter?.name || 'Recruiter',
@@ -131,94 +173,152 @@ const VideoConferencePage = () => {
     company: interview.recruiter?.company || 'Company',
     scheduledTime: formatDateTime(interview.scheduledDateTime),
     duration: interview.duration || 60,
-    status: interview.status
+    status: interview.status || 'scheduled'
   };
-  
-  // Capitalize status for display
-  const capitalizeStatus = (status) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-  
+
+  const otherParty =
+    userType === 'recruiter' ? interviewInfo.candidateName : interviewInfo.recruiterName;
+
   return (
-    <div className="video-conference-page">
-      {/* Modern Interview Info Header */}
-      <div className="interview-info">
-        <h2>{interviewInfo.position} Interview</h2>
-        <div className="interview-details">
-          <p>
-            <strong>Candidate:</strong> 
-            <span className="ms-1">{interviewInfo.candidateName}</span>
-          </p>
-          <p>
-            <strong>Recruiter:</strong> 
-            <span className="ms-1">{interviewInfo.recruiterName}</span>
-            {interviewInfo.company && (
-              <span className="ms-1">({interviewInfo.company})</span>
-            )}
-          </p>
-          <p>
-            <strong>Scheduled:</strong> 
-            <span className="ms-1">{interviewInfo.scheduledTime}</span>
-          </p>
-          <p>
-            <strong>Duration:</strong> 
-            <span className="ms-1">{interviewInfo.duration} minutes</span>
-          </p>
-          <p>
-            <strong>Status:</strong> 
-            <span className={`status-${interviewInfo.status} ms-1`}>
-              {capitalizeStatus(interviewInfo.status)}
-            </span>
-          </p>
-        </div>
+    <div className="conference-shell page-shell">
+      <div className="container conference-layout">
+        <section className="conference-hero-grid">
+          <div className="conference-overview instrument-card">
+            <div className="conference-overview-head">
+              <span className="eyebrow eyebrow-dark">
+                <FiVideo />
+                Live interview room
+              </span>
+              <span className={`signal-chip ${getStatusTone(interviewInfo.status)}`}>
+                {capitalizeStatus(interviewInfo.status)}
+              </span>
+            </div>
+
+            <h1>{interviewInfo.position} session</h1>
+            <p>
+              {userType === 'recruiter'
+                ? 'Review the briefing, monitor the call state, and capture evidence while the conversation is live.'
+                : 'Join with your role context in front of you so the interview stays grounded in the actual application.'}
+            </p>
+
+            <div className="conference-highlight-grid">
+              <div className="conference-highlight-card">
+                <span>Counterpart</span>
+                <strong>{otherParty}</strong>
+              </div>
+              <div className="conference-highlight-card">
+                <span>Company</span>
+                <strong>{interviewInfo.company}</strong>
+              </div>
+              <div className="conference-highlight-card">
+                <span>Room mode</span>
+                <strong>{userType === 'recruiter' ? 'Evaluation' : 'Candidate focus'}</strong>
+              </div>
+            </div>
+          </div>
+
+          <aside className="conference-brief surface-card">
+            <span className="eyebrow">Session protocol</span>
+            <div className="conference-detail-list">
+              <div>
+                <span><FiCalendar /> Scheduled</span>
+                <strong>{interviewInfo.scheduledTime}</strong>
+              </div>
+              <div>
+                <span><FiClock /> Duration</span>
+                <strong>{interviewInfo.duration} minutes</strong>
+              </div>
+              <div>
+                <span><FiUser /> Candidate</span>
+                <strong>{interviewInfo.candidateName}</strong>
+              </div>
+              <div>
+                <span><FiShield /> Recruiter</span>
+                <strong>{interviewInfo.recruiterName}</strong>
+              </div>
+            </div>
+
+            <div className="conference-guidance">
+              <div>
+                <span className="signal-chip ai">Room guidance</span>
+                <p>
+                  Check camera and microphone before starting. Use screen sharing only when you
+                  want the other participant to review a document or work sample live.
+                </p>
+              </div>
+              <div>
+                <span className="signal-chip active">Live note</span>
+                <p>
+                  The call controls stay visible below the stream so mute, video, and exit actions
+                  remain one tap away on both desktop and mobile.
+                </p>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="conference-video-stage surface-card">
+          <div className="conference-stage-header">
+            <div>
+              <span className="eyebrow">Meeting channel</span>
+              <h2>Video and controls</h2>
+            </div>
+            <div className="conference-stage-meta">
+              <span className="conference-stage-meta-item">
+                <FiActivity />
+                Real-time
+              </span>
+              <span className="conference-stage-meta-item mono">{interviewId}</span>
+            </div>
+          </div>
+          <div className="conference-video-wrap">
+            <VideoChat interviewId={interviewId} userType={userType} userName={userName} />
+          </div>
+        </section>
+
+        {userType === 'recruiter' && (
+          <section className="conference-feedback-shell surface-card">
+            <div className="conference-feedback-head">
+              <div>
+                <span className="eyebrow">Decision record</span>
+                <h2>Interview feedback</h2>
+              </div>
+              <p>
+                Capture evidence while the interview is fresh. This keeps candidate communication
+                and follow-up decisions aligned with the live session.
+              </p>
+            </div>
+            <InterviewFeedback
+              interviewId={interviewId}
+              onFeedbackSubmitted={() => {
+                try {
+                  interviewService.updateInterviewStatus(interviewId, 'completed');
+                } catch (err) {
+                  console.error('Error updating interview status:', err);
+                }
+              }}
+            />
+          </section>
+        )}
+
+        {userType === 'candidate' && interview.feedback?.isShared && (
+          <section className="conference-feedback-shell surface-card">
+            <div className="conference-feedback-head">
+              <div>
+                <span className="eyebrow">Shared review</span>
+                <h2>Recruiter feedback</h2>
+              </div>
+              <p>
+                The recruiter has shared the interview assessment for this session. Review the
+                notes alongside your preparation flow and next steps.
+              </p>
+            </div>
+            <InterviewFeedback interviewId={interviewId} readOnly />
+          </section>
+        )}
       </div>
-      
-      {/* Video Conference Section */}
-      <div className="video-section">
-        <VideoChat 
-          interviewId={interviewId} 
-          userType={userType}
-          userName={userName}
-        />
-      </div>
-      
-      {/* Show feedback component for recruiters */}
-      {userType === 'recruiter' && (
-        <div className="feedback-section">
-          <h3>Interview Feedback</h3>
-          <p className="text-muted mb-4">
-            You can provide feedback during or after the interview. 
-            This will help the candidate understand their performance and areas for improvement.
-          </p>
-          <InterviewFeedback 
-            interviewId={interviewId}
-            onFeedbackSubmitted={() => {
-              // Update interview status to completed
-              try {
-                interviewService.updateInterviewStatus(interviewId, 'completed');
-              } catch (err) {
-                console.error('Error updating interview status:', err);
-              }
-            }}
-          />
-        </div>
-      )}
-      
-      {/* Show feedback to candidate if it's shared */}
-      {userType === 'candidate' && interview.feedback && interview.feedback.isShared && (
-        <div className="feedback-section">
-          <h3>Recruiter Feedback</h3>
-          <p className="text-muted mb-4">
-            The recruiter has shared their feedback on your interview performance.
-          </p>
-          <InterviewFeedback 
-            interviewId={interviewId}
-            readOnly={true} 
-          />
-        </div>
-      )}
     </div>
   );
 };
 
-export default VideoConferencePage; 
+export default VideoConferencePage;

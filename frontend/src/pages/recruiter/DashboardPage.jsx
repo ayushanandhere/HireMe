@@ -1,252 +1,391 @@
-import React, { useState, useEffect } from 'react';
-import { authService, interviewService } from '../../services/api';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FaCalendar, 
-  FaUsers, 
-  FaBriefcase, 
-  FaChartLine, 
-  FaPlus, 
+import {
   FaArrowRight,
-  FaClock,
-  FaCheckCircle,
-  FaExclamationCircle,
-  FaSpinner
+  FaBriefcase,
+  FaCalendar,
+  FaClipboardList,
+  FaSpinner,
+  FaUsers
 } from 'react-icons/fa';
+import { recruiterService } from '../../services/api';
 import './Dashboard.css';
 
+const stageLabels = {
+  new_application: 'New',
+  resume_screened: 'Screened',
+  job_matched: 'Matched',
+  interview_requested: 'Interview requested',
+  interview_scheduled: 'Interview scheduled',
+  interview_completed: 'Interview completed',
+  offer_extended: 'Offer extended',
+  offer_accepted: 'Offer accepted',
+  interview_cancelled: 'Interview cancelled',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn'
+};
+
+const stageSequence = [
+  'new_application',
+  'resume_screened',
+  'job_matched',
+  'interview_requested',
+  'interview_scheduled',
+  'offer_extended',
+  'rejected'
+];
+
+const getStageTone = (stage) => {
+  if (['job_matched', 'offer_extended', 'offer_accepted', 'interview_completed'].includes(stage)) {
+    return 'positive';
+  }
+
+  if (['resume_screened', 'interview_scheduled'].includes(stage)) {
+    return 'active';
+  }
+
+  if (['new_application', 'interview_requested'].includes(stage)) {
+    return 'review';
+  }
+
+  return 'alert';
+};
+
 const RecruiterDashboardPage = () => {
-  const [user, setUser] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [interviews, setInterviews] = useState({
-    pending: 0,
-    upcoming: 0,
-    past: 0
-  });
-  const [activeJobs, setActiveJobs] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadSummary = async () => {
       try {
-        // Get user data
-        const userData = authService.getUser();
-        setUser(userData);
+        setLoading(true);
+        const response = await recruiterService.getDashboardSummary();
 
-        // Fetch interviews data
-        const interviewsResponse = await interviewService.getRecruiterInterviews();
-        if (interviewsResponse.success) {
-          // Organize interviews by status
-          const now = new Date();
-          let pendingCount = 0;
-          let upcomingCount = 0;
-          let pastCount = 0;
-          
-          interviewsResponse.data.forEach(interview => {
-            const interviewDate = new Date(interview.scheduledDateTime);
-            
-            if (interview.status === 'pending') {
-              pendingCount++;
-            } else if (['accepted', 'completed'].includes(interview.status)) {
-              if (interviewDate > now) {
-                upcomingCount++;
-              } else {
-                pastCount++;
-              }
-            }
-          });
-          
-          setInterviews({
-            pending: pendingCount,
-            upcoming: upcomingCount,
-            past: pastCount
-          });
+        if (!response.success) {
+          throw new Error(response.message || 'Failed to load recruiter dashboard');
         }
 
-        // For demonstration, we'll set a placeholder number for active jobs.
-        // In a real app, you would fetch this from a jobs API.
-        setActiveJobs(5); 
+        setSummary(response.data);
+        setError('');
       } catch (err) {
-        setError('Failed to load data. Please refresh and try again.');
-        console.error('Error fetching data:', err);
+        setError(err.message || 'Failed to load recruiter dashboard');
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchData();
+
+    loadSummary();
   }, []);
 
   if (loading) {
     return (
-      <div className="dashboard-loading">
-        <div className="loading-spinner">
-          <FaSpinner className="animate-spin" size={32} />
-        </div>
-        <p className="loading-text">Loading your dashboard...</p>
+      <div className="recruiter-cockpit-loading">
+        <FaSpinner className="recruiter-cockpit-spinner" />
+        <p>Loading recruiter cockpit...</p>
       </div>
     );
   }
 
+  if (!summary) {
+    return <div className="recruiter-cockpit-loading">Unable to load dashboard.</div>;
+  }
+
+  const priorityApplications = summary.pipeline.priorityApplications || [];
+  const totalApplications = summary.pipeline.totalApplications || 0;
+  const stageCounts = summary.pipeline.stageCounts || {};
+  const stageItems = stageSequence
+    .map((stage) => ({
+      stage,
+      label: stageLabels[stage] || stage,
+      count: stageCounts[stage] || 0,
+      tone: getStageTone(stage)
+    }))
+    .filter(({ count }) => count > 0);
+  const topPriority = priorityApplications[0];
+  const funnelSignal = topPriority
+    ? {
+        tone: topPriority.stage === 'interview_requested' ? 'active' : 'review',
+        badge: 'Queue live',
+        title: `Move ${topPriority.candidate?.name || 'the next candidate'} on ${
+          topPriority.job?.title || 'the current role'
+        }.`,
+        copy: 'Priority applications are already sorted by fit and urgency. Move the queue before the signal cools down.',
+        to: `/dashboard/recruiter/jobs/${topPriority.job?._id}/applications`,
+        label: 'Review priority queue'
+      }
+    : summary.interviews.upcoming > 0
+      ? {
+          tone: 'active',
+          badge: 'Interviews live',
+          title: 'Brief and close this week’s interview slate.',
+          copy: 'Attention should shift from intake to interview execution. Keep the loop tight while meetings are scheduled.',
+          to: '/dashboard/recruiter/interviews',
+          label: 'Open interview hub'
+        }
+      : {
+          tone: 'review',
+          badge: 'Need intake',
+          title: 'Create or publish the next role to seed the funnel.',
+          copy: 'No urgent queue yet. The next leverage point is role creation, not over-optimizing an empty pipeline.',
+          to: '/dashboard/recruiter/jobs/create',
+          label: 'Create a role'
+        };
+
   return (
-    <div className="modern-dashboard">
-      {/* Enhanced Header Section */}
-      <div className="dashboard-header">
-        <div className="header-content">
-          <div className="welcome-section">
-            <div className="greeting-wrapper">
-              <h1 className="dashboard-title">
-                Welcome back, <span className="name-highlight">{user?.name || 'Recruiter'}</span>! 
-                <span className="wave-emoji">👋</span>
-              </h1>
-              <p className="dashboard-subtitle">
-                Here's your recruitment command center. Track progress, manage interviews, and discover top talent.
-              </p>
+    <div className="recruiter-cockpit page-shell">
+      <section className="recruiter-hero-grid">
+        <article className="recruiter-cockpit-hero instrument-card">
+          <span className="eyebrow eyebrow-dark">Recruiter screening cockpit</span>
+          <h1>Move from applications to decisions.</h1>
+          <p>
+            Review active roles, prioritize promising candidates, and keep interviews moving
+            through a cleaner, more interpretable hiring pipeline.
+          </p>
+          <div className="recruiter-cockpit-actions">
+            <Link to="/dashboard/recruiter/jobs/create" className="action-link primary">
+              Create a role <FaArrowRight />
+            </Link>
+            <Link to="/dashboard/recruiter/jobs" className="action-link signal">
+              Manage current jobs
+            </Link>
+            <Link to="/dashboard/recruiter/profile" className="action-link ghost">
+              Manage profile
+            </Link>
+          </div>
+          <div className="recruiter-hero-strip">
+            <div>
+              <span className="recruiter-hero-label">Priority queue</span>
+              <strong>{priorityApplications.length}</strong>
+            </div>
+            <div>
+              <span className="recruiter-hero-label">Upcoming interviews</span>
+              <strong>{summary.interviews.upcoming}</strong>
+            </div>
+            <div>
+              <span className="recruiter-hero-label">Active jobs</span>
+              <strong>{summary.jobs.active}</strong>
             </div>
           </div>
-          <div className="header-actions">
-            <Link to="/dashboard/recruiter/jobs/create" className="create-job-btn">
-              <div className="btn-icon">
-                <FaPlus size={16} />
+        </article>
+
+        <article className="recruiter-command-panel surface-card">
+          <div className="recruiter-command-head">
+            <span className="eyebrow">Funnel pressure</span>
+            <span className={`signal-chip ${funnelSignal.tone}`}>{funnelSignal.badge}</span>
+          </div>
+          <h2>{funnelSignal.title}</h2>
+          <p>{funnelSignal.copy}</p>
+          <div className="recruiter-command-metrics">
+            <div>
+              <span className="recruiter-command-label">Applications</span>
+              <strong>{totalApplications}</strong>
+            </div>
+            <div>
+              <span className="recruiter-command-label">Candidates</span>
+              <strong>{summary.pipeline.totalCandidates}</strong>
+            </div>
+            <div>
+              <span className="recruiter-command-label">Live roles</span>
+              <strong>{summary.jobs.active}</strong>
+            </div>
+          </div>
+          <Link to={funnelSignal.to} className="action-link secondary">
+            {funnelSignal.label} <FaArrowRight />
+          </Link>
+        </article>
+      </section>
+
+      <section className="recruiter-cockpit-stats">
+        <article className="surface-card recruiter-metric-card">
+          <span>Active jobs</span>
+          <strong>{summary.jobs.active}</strong>
+          <p>Published roles recruiting now.</p>
+          <small className="recruiter-metric-line active">Roles define current intake capacity.</small>
+        </article>
+        <article className="surface-card recruiter-metric-card">
+          <span>Total applications</span>
+          <strong>{summary.pipeline.totalApplications}</strong>
+          <p>Candidates currently in your funnel.</p>
+          <small className="recruiter-metric-line review">Queue pressure should convert into decisions.</small>
+        </article>
+        <article className="surface-card recruiter-metric-card">
+          <span>Upcoming interviews</span>
+          <strong>{summary.interviews.upcoming}</strong>
+          <p>Meetings scheduled and not yet closed.</p>
+          <small className="recruiter-metric-line active">Execution mode is now live.</small>
+        </article>
+        <article className="surface-card recruiter-metric-card">
+          <span>Candidate pool</span>
+          <strong>{summary.pipeline.totalCandidates}</strong>
+          <p>Unique people active across your roles.</p>
+          <small className="recruiter-metric-line ai">Signal ranked against role demand.</small>
+        </article>
+      </section>
+
+      <section className="recruiter-cockpit-grid">
+        <article className="recruiter-panel recruiter-priority-panel">
+          <div className="recruiter-panel-head">
+            <div>
+              <span className="eyebrow">Priority queue</span>
+              <h2>Best next candidates to move</h2>
+            </div>
+            <Link to="/dashboard/recruiter/candidates">Candidate pool</Link>
+          </div>
+          {priorityApplications.length === 0 ? (
+            <p className="recruiter-empty">No applications yet. Create or publish a role to begin.</p>
+          ) : (
+            <div className="recruiter-priority-list">
+              {priorityApplications.map((application) => (
+                <div key={application._id} className="recruiter-priority-card">
+                  <div className="recruiter-priority-main">
+                    <div>
+                      <strong>{application.candidate?.name || 'Candidate'}</strong>
+                      <span>{application.job?.title}</span>
+                    </div>
+                    <div className="recruiter-fit-meter">
+                      <span className="mono">Fit</span>
+                      <strong>{application.candidateRoleFit || application.matchScore || 0}%</strong>
+                    </div>
+                  </div>
+                  <div className="recruiter-priority-meta">
+                    <span className={`signal-chip ${getStageTone(application.stage)}`}>
+                      {application.stageLabel}
+                    </span>
+                    <small>{application.stageLabel}</small>
+                  </div>
+                  <div className="recruiter-priority-actions">
+                    <Link to={`/dashboard/recruiter/jobs/${application.job?._id}/applications`}>
+                      Review application
+                    </Link>
+                    {application.stage === 'interview_requested' && (
+                      <Link
+                        to={`/dashboard/recruiter/schedule-interview/${application.candidate?._id}?jobId=${application.job?._id}&applicationId=${application._id}`}
+                      >
+                        Schedule interview
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="recruiter-panel recruiter-pipeline-panel instrument-card">
+          <div className="recruiter-panel-head">
+            <div>
+              <span className="eyebrow eyebrow-dark">Pipeline view</span>
+              <h2>Stage distribution across all roles</h2>
+            </div>
+            <span className="signal-chip ai">Signal density</span>
+          </div>
+          <div className="recruiter-stage-meter">
+            {stageItems.map(({ stage, count, tone }) => (
+              <div
+                key={stage}
+                className={`recruiter-stage-segment tone-${tone}`}
+                style={{ width: `${Math.max((count / Math.max(totalApplications, 1)) * 100, 8)}%` }}
+              />
+            ))}
+          </div>
+          <div className="recruiter-stage-grid">
+            {stageItems.map(({ stage, label, count, tone }) => (
+              <div key={stage} className={`recruiter-stage-card tone-${tone}`}>
+                <strong>{count}</strong>
+                <span>{label}</span>
               </div>
-              <div className="btn-content">
-                <span className="btn-text">Create New Job</span>
-                <span className="btn-subtitle">Post a role & find talent</span>
+            ))}
+          </div>
+        </article>
+
+        <article className="recruiter-panel recruiter-jobs-panel">
+          <div className="recruiter-panel-head">
+            <div>
+              <span className="eyebrow">Role activity</span>
+              <h2>Recent jobs</h2>
+            </div>
+            <Link to="/dashboard/recruiter/jobs">All jobs</Link>
+          </div>
+          <div className="recruiter-list">
+            {summary.jobs.recent.map((job) => (
+              <div key={job._id} className="recruiter-list-item">
+                <div>
+                  <strong>{job.title}</strong>
+                  <span>{job.company}</span>
+                </div>
+                <span className="signal-chip active">{job.status}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="recruiter-panel recruiter-interviews-panel">
+          <div className="recruiter-panel-head">
+            <div>
+              <span className="eyebrow">Interview queue</span>
+              <h2>What needs attention this week</h2>
+            </div>
+            <Link to="/dashboard/recruiter/interviews">Interview hub</Link>
+          </div>
+          {summary.interviews.items.length === 0 ? (
+            <p className="recruiter-empty">No interviews scheduled yet.</p>
+          ) : (
+            <div className="recruiter-list">
+              {summary.interviews.items.map((interview) => (
+                <div key={interview._id} className="recruiter-list-item">
+                  <div>
+                    <strong>{interview.candidate?.name || 'Candidate'}</strong>
+                    <span>{interview.position?.title}</span>
+                  </div>
+                  <small>{new Date(interview.scheduledDateTime).toLocaleString()}</small>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="recruiter-panel recruiter-actions-panel">
+          <div className="recruiter-panel-head">
+            <div>
+              <span className="eyebrow">Next-best actions</span>
+              <h2>Keep the funnel moving</h2>
+            </div>
+          </div>
+          <div className="recruiter-action-grid">
+            <Link to="/dashboard/recruiter/jobs" className="recruiter-action-card">
+              <FaBriefcase />
+              <div>
+                <strong>Manage live jobs</strong>
+                <p>Close stale roles and keep active openings clear.</p>
+              </div>
+            </Link>
+            <Link to="/dashboard/recruiter/candidates" className="recruiter-action-card">
+              <FaUsers />
+              <div>
+                <strong>Screen candidates</strong>
+                <p>Inspect resumes, ATS signal, and match explanations.</p>
+              </div>
+            </Link>
+            <Link to="/dashboard/recruiter/interviews" className="recruiter-action-card">
+              <FaCalendar />
+              <div>
+                <strong>Run interviews</strong>
+                <p>Schedule, brief, and close the loop with feedback.</p>
+              </div>
+            </Link>
+            <Link to="/dashboard/recruiter/jobs/create" className="recruiter-action-card">
+              <FaClipboardList />
+              <div>
+                <strong>Create a role</strong>
+                <p>Seed the funnel with a fresh, visible opening.</p>
               </div>
             </Link>
           </div>
-        </div>
-      </div>
-      
-      {error && (
-        <div className="error-banner">
-          <FaExclamationCircle size={20} />
-          <span>{error}</span>
-        </div>
-      )}
-      
-      {/* Enhanced Statistics Dashboard */}
-      <div className="stats-section">
-        <div className="section-header">
-          <h2 className="section-title">Dashboard Overview</h2>
-          <p className="section-subtitle">Real-time insights into your recruitment activities</p>
-        </div>
-        
-        <div className="stats-grid">
-          <div className="stat-card pending">
-            <div className="stat-icon-wrapper">
-              <div className="stat-icon">
-                <FaClock size={24} />
-              </div>
-            </div>
-            <div className="stat-content">
-              <div className="stat-number">{interviews.pending}</div>
-              <div className="stat-label">Pending Interviews</div>
-              <div className="stat-description">Awaiting candidate response</div>
-            </div>
-            <div className="stat-trend">
-              <div className="trend-indicator neutral"></div>
-            </div>
-          </div>
-          
-          <div className="stat-card upcoming">
-            <div className="stat-icon-wrapper">
-              <div className="stat-icon">
-                <FaCalendar size={24} />
-              </div>
-            </div>
-            <div className="stat-content">
-              <div className="stat-number">{interviews.upcoming}</div>
-              <div className="stat-label">Upcoming Interviews</div>
-              <div className="stat-description">Scheduled this week</div>
-            </div>
-            <div className="stat-trend">
-              <div className="trend-indicator positive"></div>
-            </div>
-          </div>
-          
-          <div className="stat-card completed">
-            <div className="stat-icon-wrapper">
-              <div className="stat-icon">
-                <FaCheckCircle size={24} />
-              </div>
-            </div>
-            <div className="stat-content">
-              <div className="stat-number">{interviews.past}</div>
-              <div className="stat-label">Completed Interviews</div>
-              <div className="stat-description">Successfully conducted</div>
-            </div>
-            <div className="stat-trend">
-              <div className="trend-indicator positive"></div>
-            </div>
-          </div>
-          
-          <div className="stat-card jobs">
-            <div className="stat-icon-wrapper">
-              <div className="stat-icon">
-                <FaBriefcase size={24} />
-              </div>
-            </div>
-            <div className="stat-content">
-              <div className="stat-number">{activeJobs}</div>
-              <div className="stat-label">Active Jobs</div>
-              <div className="stat-description">Currently hiring</div>
-            </div>
-            <div className="stat-trend">
-              <div className="trend-indicator positive"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </article>
+      </section>
 
-      {/* Quick Actions */}
-      <div className="actions-section">
-        <div className="section-header">
-          <h2 className="section-title">Quick Actions</h2>
-          <p className="section-subtitle">Streamline your workflow with these powerful tools.</p>
-        </div>
-        
-        <div className="actions-grid">
-          <Link to="/dashboard/recruiter/jobs" className="action-card primary">
-            <div className="action-card-content">
-              <div className="action-icon">
-                <FaBriefcase size={28} />
-              </div>
-              <div className="action-content">
-                <h3>Manage Jobs</h3>
-                <p>View, edit, and track all your active job postings.</p>
-              </div>
-            </div>
-            <FaArrowRight className="action-arrow" size={20} />
-          </Link>
-          
-          <Link to="/dashboard/recruiter/interviews" className="action-card secondary">
-            <div className="action-card-content">
-              <div className="action-icon">
-                <FaCalendar size={28} />
-              </div>
-              <div className="action-content">
-                <h3>Interview Hub</h3>
-                <p>Schedule and manage all candidate interviews.</p>
-              </div>
-            </div>
-            <FaArrowRight className="action-arrow" size={20} />
-          </Link>
-          
-          <Link to="/dashboard/recruiter/candidates" className="action-card tertiary">
-            <div className="action-card-content">
-              <div className="action-icon">
-                <FaUsers size={28} />
-              </div>
-              <div className="action-content">
-                <h3>Candidate Pool</h3>
-                <p>Discover top talent for your open positions.</p>
-              </div>
-            </div>
-            <FaArrowRight className="action-arrow" size={20} />
-          </Link>
-        </div>
-      </div>
+      {error && <div className="recruiter-error">{error}</div>}
     </div>
   );
 };

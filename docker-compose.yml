@@ -21,6 +21,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: hireme-backend
+    command: sh -c "npm install && npm start"
     restart: always
     ports:
       - "5001:5000"
@@ -32,6 +33,16 @@ services:
       - JWT_SECRET=hireme_jwt_secret_key_should_be_long_and_complex
       - JWT_EXPIRES_IN=30d
       - FRONTEND_URL=http://localhost:3000
+      - BACKEND_URL=http://localhost:5001
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-1073561766922-bhrfj5uks4asll0bqfjl1r6kgit7fu9k.apps.googleusercontent.com}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_AUTH_REDIRECT_URI=${GOOGLE_AUTH_REDIRECT_URI:-http://localhost:5001/api/auth/google/callback}
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_SECURE=${EMAIL_SECURE:-false}
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
       - SOCKET_URL=http://localhost:5001
       - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_api_key_here}
       - OPENAI_MODEL=gpt-4o
@@ -48,6 +59,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: hireme-frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     restart: always
     ports:
       - "3000:5173"
@@ -56,6 +68,7 @@ services:
     environment:
       - VITE_BACKEND_URL=http://localhost:5001
       - VITE_SOCKET_URL=http://localhost:5001
+      - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-1073561766922-bhrfj5uks4asll0bqfjl1r6kgit7fu9k.apps.googleusercontent.com}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules

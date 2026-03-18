@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { api, BACKEND_URL } from '../services/api';
 
 const NotificationContext = createContext();
 
@@ -18,40 +19,23 @@ export const NotificationProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('No authentication token found, skipping notification fetch');
+        setNotifications([]);
+        setUnreadCount(0);
         setLoading(false);
         return;
       }
 
-      console.log('Fetching notifications from API...');
-      const apiUrl = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications`;
-      console.log('API URL:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      console.log('API response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Notifications data:', data);
+      const response = await api.get('/notifications');
+      const data = response.data;
       
       if (data.success) {
         setNotifications(data.data || []);
         setUnreadCount((data.data || []).filter(notification => !notification.isRead).length);
-        console.log('Successfully loaded notifications:', data.data?.length || 0);
+        setError(null);
       } else {
-        console.error('API returned success: false', data);
         setError(data.message || 'Unknown error loading notifications');
       }
     } catch (err) {
-      console.error('Error fetching notifications:', err);
       setError(`Failed to load notifications: ${err.message}`);
     } finally {
       setLoading(false);
@@ -60,19 +44,11 @@ export const NotificationProvider = ({ children }) => {
 
   // Initialize socket connection
   useEffect(() => {
-    console.log('Creating socket connection...');
     try {
-      const serverUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-      console.log('Connecting to server:', serverUrl);
-      
-      // Retrieve auth token for socket authentication
       const token = localStorage.getItem('token');
-      if (!token) {
-        console.warn('No auth token found for socket connection');
-      }
+      if (!token) return undefined;
       
-      const newSocket = io(serverUrl, {
-        // Send token for backend socket authentication
+      const newSocket = io(BACKEND_URL, {
         auth: { token },
         transports: ['websocket', 'polling'],
         reconnection: true,
@@ -83,7 +59,6 @@ export const NotificationProvider = ({ children }) => {
       setSocket(newSocket);
       
       return () => {
-        console.log('Cleaning up socket connection...');
         if (newSocket) {
           newSocket.disconnect();
         }
@@ -97,68 +72,39 @@ export const NotificationProvider = ({ children }) => {
   // Set up socket event listeners
   useEffect(() => {
     if (!socket) {
-      console.log('Socket not yet initialized, skipping event setup');
       return;
     }
 
-    console.log('Setting up socket event listeners');
-
     // Listen for new notifications
     socket.on('notification', (notification) => {
-      console.log('Received notification:', notification);
-      
-      // Only add notification if it's for the current user
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      console.log('Current user:', currentUser);
-      
       const isForCurrentUser = currentUser._id === notification.recipientId;
-      console.log('Is for current user:', isForCurrentUser);
       
       if (isForCurrentUser) {
-        setNotifications(prev => [notification, ...prev]);
-        setUnreadCount(prev => prev + 1);
+        setNotifications(prev => [notification, ...prev.filter((item) => item._id !== notification._id)]);
+        setUnreadCount(prev => prev + (notification.isRead ? 0 : 1));
       }
     });
 
     // Listen for new interview requests
-    socket.on('new_interview_request', (interview) => {
-      console.log('Received new interview request:', interview);
-      
-      // Refresh notifications since a new interview request should create a notification
+    socket.on('new_interview_request', () => {
       fetchNotifications();
     });
 
     // Listen for interview status updates
-    socket.on('interview_status_update', (interview) => {
-      console.log('Received interview status update:', interview);
-      
-      // Refresh notifications since status changes should create notifications
+    socket.on('interview_status_update', () => {
       fetchNotifications();
     });
 
-    // Handle errors
-    socket.on('error', (err) => {
-      console.error('Socket error:', err);
+    socket.on('connect_error', () => {
       setError('Failed to connect to notification service');
     });
 
-    // Handle connection/disconnection
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
-    });
-    
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-    });
-
     return () => {
-      console.log('Cleaning up socket event listeners');
       socket.off('notification');
       socket.off('new_interview_request');
       socket.off('interview_status_update');
-      socket.off('error');
-      socket.off('connect');
-      socket.off('disconnect');
+      socket.off('connect_error');
     };
   }, [socket]);
 
@@ -173,21 +119,12 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to mark notification as read');
-      }
+      await api.put(`/notifications/${id}/read`);
 
       setNotifications(prev => 
         prev.map(notification => 
           notification._id === id 
-            ? { ...notification, read: true } 
+            ? { ...notification, isRead: true } 
             : notification
         )
       );
@@ -203,19 +140,10 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications/read-all`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to mark all notifications as read');
-      }
+      await api.put('/notifications/read-all');
 
       setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
+        prev.map(notification => ({ ...notification, isRead: true }))
       );
       setUnreadCount(0);
     } catch (err) {
@@ -229,19 +157,10 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'}/api/notifications/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete notification');
-      }
+      await api.delete(`/notifications/${id}`);
 
       const notificationToDelete = notifications.find(n => n._id === id);
-      const wasUnread = notificationToDelete && !notificationToDelete.read;
+      const wasUnread = notificationToDelete && !notificationToDelete.isRead;
 
       setNotifications(prev => prev.filter(notification => notification._id !== id));
       

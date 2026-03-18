@@ -59,12 +59,6 @@ const EnhancedResumeAnalysis = ({ enhancedAnalysis, resumeSource }) => {
   // Prepare data for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
   
-  // Prepare data for skills bar chart
-  const skillBarData = skillProficiency?.map(item => ({
-    name: item.skill,
-    value: item.rating,
-  })) || [];
-
   // Helper function to get gradient background based on fit score
   const getFitScoreGradient = (score) => {
     if (score >= 80) {
@@ -78,14 +72,6 @@ const EnhancedResumeAnalysis = ({ enhancedAnalysis, resumeSource }) => {
     }
   };
 
-  // Helper function to get color for fit score - used for text and borders
-  const getFitScoreColor = (score) => {
-    if (score >= 80) return '#4caf50';
-    if (score >= 60) return '#2196f3';
-    if (score >= 40) return '#ff9800';
-    return '#f44336';
-  };
-  
   // Helper function to get icon for soft skill
   const getSoftSkillIcon = (index) => {
     const icons = [

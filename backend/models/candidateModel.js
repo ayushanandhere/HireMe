@@ -62,20 +62,57 @@ const candidateSchema = new mongoose.Schema(
       lowercase: true,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    passwordResetToken: String,
+    passwordResetExpires: Date,
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: function() {
+        return !this.googleId;
+      },
       minlength: [6, 'Password must be at least 6 characters']
     },
     skills: {
       type: String,
       trim: true
     },
+    headline: {
+      type: String,
+      trim: true,
+      maxlength: 120
+    },
     experience: {
       type: String,
       trim: true
     },
+    location: {
+      type: String,
+      trim: true,
+      maxlength: 120
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 40
+    },
+    linkedin: {
+      type: String,
+      trim: true,
+      maxlength: 255
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 1200
+    },
     resumePath: {
+      type: String
+    },
+    profilePicturePath: {
       type: String
     },
     role: {
@@ -114,7 +151,7 @@ const candidateSchema = new mongoose.Schema(
 
 // Hash password before saving
 candidateSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
   
@@ -129,6 +166,10 @@ candidateSchema.pre('save', async function(next) {
 
 // Method to check if entered password is correct
 candidateSchema.methods.matchPassword = async function(enteredPassword) {
+  if (!this.password) {
+    return false;
+  }
+
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

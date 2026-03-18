@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaVideo, FaEye, FaCheckCircle, FaTimesCircle, FaBriefcase, FaGraduationCap } from 'react-icons/fa';
-import { authService, interviewService } from '../../services/api';
-import videoService from '../../services/videoService';
+import {
+  FaCheckCircle,
+  FaEye,
+  FaGraduationCap,
+  FaTimesCircle,
+  FaVideo
+} from 'react-icons/fa';
+import { interviewService } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
-import './Dashboard.css';
+import './InterviewInboxPage.css';
+
+const getStatusTone = (status) => {
+  if (['accepted', 'completed'].includes(status)) return 'positive';
+  if (['pending'].includes(status)) return 'review';
+  return 'alert';
+};
 
 const InterviewInboxPage = () => {
-  const [user, setUser] = useState(null);
   const [interviews, setInterviews] = useState({
     pending: [],
     upcoming: [],
@@ -21,23 +31,17 @@ const InterviewInboxPage = () => {
   const fetchInterviews = async () => {
     try {
       setLoading(true);
-      // Get user data
-      const userData = authService.getUser();
-      setUser(userData);
-      
-      // Fetch interviews
       const response = await interviewService.getCandidateInterviews();
-      
+
       if (response.success) {
-        // Organize interviews by status
         const now = new Date();
         const pending = [];
         const upcoming = [];
         const past = [];
-        
-        response.data.forEach(interview => {
+
+        response.data.forEach((interview) => {
           const interviewDate = new Date(interview.scheduledDateTime);
-          
+
           if (interview.status === 'pending') {
             pending.push(interview);
           } else if (['accepted', 'completed'].includes(interview.status)) {
@@ -46,14 +50,12 @@ const InterviewInboxPage = () => {
             } else {
               past.push(interview);
             }
+          } else {
+            past.push(interview);
           }
         });
-        
-        setInterviews({
-          pending,
-          upcoming,
-          past
-        });
+
+        setInterviews({ pending, upcoming, past });
       }
     } catch (err) {
       setError('Failed to load interviews. Please refresh and try again.');
@@ -63,21 +65,18 @@ const InterviewInboxPage = () => {
     }
   };
 
-  // Fetch interviews on component mount
   useEffect(() => {
     fetchInterviews();
   }, []);
 
-  // Refetch interviews when a new notification related to interviews is received
   useEffect(() => {
-    // Check if any of the notifications are interview related
-    const interviewNotifications = notifications.filter(notification => 
-      notification.type.includes('interview_') || 
-      (notification.relatedTo && notification.relatedTo.model === 'Interview')
+    const interviewNotifications = notifications.filter(
+      (notification) =>
+        notification.type.includes('interview_') ||
+        (notification.relatedTo && notification.relatedTo.model === 'Interview')
     );
-    
+
     if (interviewNotifications.length > 0) {
-      console.log('Received interview notification, refreshing data');
       fetchInterviews();
     }
   }, [notifications]);
@@ -86,16 +85,12 @@ const InterviewInboxPage = () => {
     try {
       setActionSuccess('');
       setError('');
-      
+
       const response = await interviewService.updateInterviewStatus(interviewId, status);
-      
+
       if (response.success) {
-        setActionSuccess(`Interview ${status === 'accepted' ? 'accepted' : 'rejected'} successfully!`);
-        
-        // Update the local state
-        setTimeout(() => {
-          window.location.reload(); // Refresh to get updated data
-        }, 1500);
+        setActionSuccess(`Interview ${status === 'accepted' ? 'accepted' : 'declined'} successfully.`);
+        fetchInterviews();
       }
     } catch (err) {
       setError(`Failed to ${status} interview. Please try again.`);
@@ -103,204 +98,197 @@ const InterviewInboxPage = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const options = { 
-      year: 'numeric', 
-      month: 'long', 
+  const formatDate = (dateString) =>
+    new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
+    });
 
   if (loading) {
-    return <div className="loading">Loading interviews...</div>;
+    return <div className="interview-hub-loading">Loading interviews...</div>;
   }
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Interview Inbox</h1>
-      </div>
-      
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
-      
-      {actionSuccess && (
-        <div className="alert alert-success" role="alert">
-          {actionSuccess}
-        </div>
-      )}
-      
-      <div className="dashboard-content">
-        {/* Pending Interview Requests */}
-        <div className="dashboard-card full-width">
-          <h2 className="section-title">Pending Interview Requests</h2>
-          
-          {interviews.pending.length > 0 ? (
-            <div className="table-responsive">
-              <table className="modern-table">
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Position</th>
-                    <th>Scheduled Date & Time</th>
-                    <th>Duration</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interviews.pending.map((interview) => (
-                    <tr key={interview._id}>
-                      <td>{interview.recruiter?.company || 'N/A'}</td>
-                      <td>{interview.position?.title || 'N/A'}</td>
-                      <td>{formatDate(interview.scheduledDateTime)}</td>
-                      <td>{interview.duration} minutes</td>
-                      <td>
-                        <div className="interview-actions">
-                          <button 
-                            className="btn btn-sm btn-success me-2"
-                            onClick={() => handleActionClick(interview._id, 'accepted')}
-                            title="Accept Interview"
-                          >
-                            <FaCheckCircle />
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleActionClick(interview._id, 'rejected')}
-                            title="Decline Interview"
-                          >
-                            <FaTimesCircle />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+    <div className="interview-hub page-shell">
+      <section className="interview-hub-hero">
+        <article className="interview-hub-hero-copy surface-card">
+          <span className="eyebrow">Interview inbox</span>
+          <h1>Know what needs a response, then prep from the right role.</h1>
+          <p>
+            Pending requests, scheduled interviews, and past outcomes live here in one queue so you
+            can respond without losing context.
+          </p>
+          <div className="interview-hub-hero-actions">
+            <Link to="/dashboard/candidate" className="action-link ghost">
+              Back to overview
+            </Link>
+            <Link to="/dashboard/candidate/applications" className="action-link secondary">
+              Open applications
+            </Link>
+          </div>
+        </article>
+
+        <article className="interview-hub-hero-panel instrument-card">
+          <div className="interview-hub-stat-grid">
+            <div>
+              <span className="interview-hub-stat-label">Pending</span>
+              <strong>{interviews.pending.length}</strong>
             </div>
-          ) : (
-            <p className="text-muted empty-state">No pending interview requests.</p>
-          )}
-        </div>
-        
-        {/* Upcoming Interviews */}
-        <div className="dashboard-card full-width">
-          <h2 className="section-title">Upcoming Interviews</h2>
-          
-          {interviews.upcoming.length > 0 ? (
-            <div className="table-responsive">
-              <table className="modern-table">
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Position</th>
-                    <th>Scheduled Date & Time</th>
-                    <th>Duration</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interviews.upcoming.map((interview) => (
-                    <tr key={interview._id}>
-                      <td>{interview.recruiter?.company || 'N/A'}</td>
-                      <td>{interview.position?.title || 'N/A'}</td>
-                      <td>{formatDate(interview.scheduledDateTime)}</td>
-                      <td>{interview.duration} minutes</td>
-                      <td>
-                        <div className="interview-actions">
-                          <Link 
-                            to={`/interview/${interview._id}/meeting`}
-                            className="btn btn-sm btn-success me-2"
-                            title="Join Video Call"
-                          >
-                            <FaVideo />
-                          </Link>
-                          {interview.applicationId && (
-                            <Link 
-                              to={`/application/${interview.applicationId._id || interview.applicationId}/training`}
-                              className="btn btn-sm btn-primary"
-                              style={{ 
-                                background: 'linear-gradient(to right, #6a11cb, #ff9e00)', 
-                                border: 'none' 
-                              }}
-                              title="AI Interview Training"
-                            >
-                              <FaGraduationCap />
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <span className="interview-hub-stat-label">Upcoming</span>
+              <strong>{interviews.upcoming.length}</strong>
             </div>
-          ) : (
-            <p className="text-muted empty-state">No upcoming interviews scheduled.</p>
-          )}
-        </div>
-        
-        {/* Past Interviews */}
-        <div className="dashboard-card full-width">
-          <h2 className="section-title">Past Interviews</h2>
-          
-          {interviews.past.length > 0 ? (
-            <div className="table-responsive">
-              <table className="modern-table">
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Position</th>
-                    <th>Date & Time</th>
-                    <th>Status</th>
-                    <th>Feedback</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interviews.past.map((interview) => (
-                    <tr key={interview._id}>
-                      <td>{interview.recruiter?.company || 'N/A'}</td>
-                      <td>{interview.position?.title || 'N/A'}</td>
-                      <td>{formatDate(interview.scheduledDateTime)}</td>
-                      <td>
-                        <span className={`badge ${
-                          interview.status === 'completed' ? 'bg-success' : 
-                          interview.status === 'cancelled' ? 'bg-danger' : 
-                          interview.status === 'rejected' ? 'bg-warning' : 'bg-secondary'
-                        }`}>
-                          {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
-                        </span>
-                      </td>
-                      <td>
-                        {interview.feedback && interview.feedback.isShared ? (
-                          <Link 
-                            to={`/dashboard/candidate/interviews/${interview._id}`}
-                            className="btn btn-sm btn-primary"
-                            title="View Feedback"
-                          >
-                            <FaEye />
-                          </Link>
-                        ) : (
-                          <span className="text-muted">Not available</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <span className="interview-hub-stat-label">Past</span>
+              <strong>{interviews.past.length}</strong>
             </div>
-          ) : (
-            <p className="text-muted empty-state">No past interviews.</p>
-          )}
+          </div>
+        </article>
+      </section>
+
+      {error && <div className="interview-hub-error">{error}</div>}
+      {actionSuccess && <div className="interview-hub-success">{actionSuccess}</div>}
+
+      <section className="interview-hub-section surface-card">
+        <div className="interview-hub-head">
+          <div>
+            <span className="eyebrow">Pending requests</span>
+            <h2>Requests waiting on your response</h2>
+          </div>
+          <span className="signal-chip review">{interviews.pending.length} open</span>
         </div>
-      </div>
+        {interviews.pending.length > 0 ? (
+          <div className="interview-hub-list">
+            {interviews.pending.map((interview) => (
+              <article key={interview._id} className="interview-hub-card surface-card">
+                <div className="interview-hub-card-head">
+                  <div>
+                    <h3>{interview.position?.title || 'Interview'}</h3>
+                    <span>{interview.recruiter?.company || 'Company unavailable'}</span>
+                  </div>
+                  <span className={`signal-chip ${getStatusTone(interview.status)}`}>Pending</span>
+                </div>
+                <div className="interview-hub-meta">
+                  <span>{formatDate(interview.scheduledDateTime)}</span>
+                  <span>{interview.duration} minutes</span>
+                </div>
+                <div className="interview-hub-actions">
+                  <button
+                    type="button"
+                    className="action-link primary"
+                    onClick={() => handleActionClick(interview._id, 'accepted')}
+                  >
+                    <FaCheckCircle /> Accept
+                  </button>
+                  <button
+                    type="button"
+                    className="action-link ghost"
+                    onClick={() => handleActionClick(interview._id, 'rejected')}
+                  >
+                    <FaTimesCircle /> Decline
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="interview-hub-empty">No pending interview requests.</p>
+        )}
+      </section>
+
+      <section className="interview-hub-section surface-card">
+        <div className="interview-hub-head">
+          <div>
+            <span className="eyebrow">Upcoming interviews</span>
+            <h2>Conversations already scheduled</h2>
+          </div>
+          <span className="signal-chip active">{interviews.upcoming.length} scheduled</span>
+        </div>
+        {interviews.upcoming.length > 0 ? (
+          <div className="interview-hub-list">
+            {interviews.upcoming.map((interview) => (
+              <article key={interview._id} className="interview-hub-card surface-card">
+                <div className="interview-hub-card-head">
+                  <div>
+                    <h3>{interview.position?.title || 'Interview'}</h3>
+                    <span>{interview.recruiter?.company || 'Company unavailable'}</span>
+                  </div>
+                  <span className="signal-chip active">Scheduled</span>
+                </div>
+                <div className="interview-hub-meta">
+                  <span>{formatDate(interview.scheduledDateTime)}</span>
+                  <span>{interview.duration} minutes</span>
+                </div>
+                <div className="interview-hub-actions">
+                  <Link to={`/interview/${interview._id}/meeting`} className="action-link primary">
+                    <FaVideo /> Join call
+                  </Link>
+                  {interview.applicationId && (
+                    <Link
+                      to={`/application/${interview.applicationId._id || interview.applicationId}/training`}
+                      className="action-link secondary"
+                    >
+                      <FaGraduationCap /> Training room
+                    </Link>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="interview-hub-empty">No upcoming interviews scheduled.</p>
+        )}
+      </section>
+
+      <section className="interview-hub-section surface-card">
+        <div className="interview-hub-head">
+          <div>
+            <span className="eyebrow">Past interviews</span>
+            <h2>Closed loops and feedback</h2>
+          </div>
+          <span className="signal-chip ai">{interviews.past.length} recorded</span>
+        </div>
+        {interviews.past.length > 0 ? (
+          <div className="interview-hub-list">
+            {interviews.past.map((interview) => (
+              <article key={interview._id} className="interview-hub-card surface-card">
+                <div className="interview-hub-card-head">
+                  <div>
+                    <h3>{interview.position?.title || 'Interview'}</h3>
+                    <span>{interview.recruiter?.company || 'Company unavailable'}</span>
+                  </div>
+                  <span className={`signal-chip ${getStatusTone(interview.status)}`}>
+                    {interview.status}
+                  </span>
+                </div>
+                <div className="interview-hub-meta">
+                  <span>{formatDate(interview.scheduledDateTime)}</span>
+                  <span>{interview.duration} minutes</span>
+                </div>
+                <div className="interview-hub-actions">
+                  {interview.feedback && interview.feedback.isShared ? (
+                    <Link
+                      to={`/dashboard/candidate/interviews/${interview._id}`}
+                      className="action-link secondary"
+                    >
+                      <FaEye /> View feedback
+                    </Link>
+                  ) : (
+                    <span className="interview-hub-note">Feedback not available</span>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="interview-hub-empty">No past interviews.</p>
+        )}
+      </section>
     </div>
   );
 };
 
-export default InterviewInboxPage; 
+export default InterviewInboxPage;

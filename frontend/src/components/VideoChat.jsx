@@ -344,13 +344,12 @@ const VideoChat = ({ interviewId, userType, userName }) => {
   // Display connection error if any
   if (connectionError) {
     return (
-      <div className="error-container">
-        <div className="alert alert-danger" role="alert">
-          {connectionError}
-        </div>
-        <div className="d-flex gap-2 mt-3">
+      <div className="video-chat-error">
+        <span className="signal-chip alert">Device access blocked</span>
+        <p>{connectionError}</p>
+        <div className="video-chat-error-actions">
           <button 
-            className="btn btn-primary" 
+            className="action-link primary"
             onClick={() => {
               setConnectionError(null);
               // Attempt to reinitialize media devices
@@ -369,7 +368,7 @@ const VideoChat = ({ interviewId, userType, userName }) => {
           >
             Retry Camera Access
           </button>
-          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+          <button type="button" className="action-link secondary" onClick={() => navigate(-1)}>
             Go Back
           </button>
         </div>
@@ -383,6 +382,10 @@ const VideoChat = ({ interviewId, userType, userName }) => {
       <div className="video-grid">
         {/* Your video */}
         <div className={`video-box local-video ${isScreenSharing ? 'screen-sharing' : ''}`}>
+          <div className="participant-state">
+            {isMuted && <span className="participant-pill alert">Muted</span>}
+            {isScreenSharing && <span className="participant-pill ai">Screen sharing</span>}
+          </div>
           <video 
             playsInline 
             muted 
@@ -391,9 +394,7 @@ const VideoChat = ({ interviewId, userType, userName }) => {
             className={isVideoOff ? 'video-off' : ''}
           />
           <div className="name-tag">
-            <span>{userName || 'You'}</span> 
-            {isMuted && <span className="ms-2">(Muted)</span>}
-            {isScreenSharing && <span className="ms-2">(Screen)</span>}
+            <span>{userName || 'You'}</span>
           </div>
         </div>
         
@@ -410,11 +411,9 @@ const VideoChat = ({ interviewId, userType, userName }) => {
         ) : (
           <div className="video-box remote-video waiting-box">
             <div className="waiting-message">
-              <div className="spinner-border text-primary mb-3" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
+              <div className="waiting-pulse" aria-hidden="true" />
               <h3>Waiting for other participant...</h3>
-              <p className="text-muted">Click "Start Call" when you're ready to begin the interview</p>
+              <p>Start the call when you are ready. The room will switch to live video as soon as the other side joins.</p>
             </div>
           </div>
         )}
@@ -466,10 +465,20 @@ const VideoChat = ({ interviewId, userType, userName }) => {
       {/* Improved Incoming call notification */}
       {receivingCall && !callAccepted && (
         <div className="incoming-call">
-          <h3>{caller} is calling...</h3>
-          <div className="d-flex justify-content-center gap-3 mt-4">
-            <button onClick={answerCall} className="btn btn-success">Answer</button>
-            <button onClick={() => setReceivingCall(false)} className="btn btn-danger">Decline</button>
+          <div className="incoming-call-card">
+            <span className="signal-chip ai">Incoming call</span>
+            <h3>{caller} is joining now.</h3>
+            <p>Answer to open the live interview stream, or decline if you need to step back out of the room.</p>
+            <div className="incoming-call-actions">
+              <button type="button" onClick={answerCall} className="incoming-call-btn answer">Answer</button>
+              <button
+                type="button"
+                onClick={() => setReceivingCall(false)}
+                className="incoming-call-btn decline"
+              >
+                Decline
+              </button>
+            </div>
           </div>
         </div>
       )}

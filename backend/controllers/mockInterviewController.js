@@ -7,6 +7,19 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const os = require('os');
+const isAIConfigured = Boolean(process.env.OPENAI_API_KEY);
+
+const respondIfAIDisabled = (res) => {
+  if (isAIConfigured) {
+    return false;
+  }
+
+  res.status(503).json({
+    success: false,
+    message: 'Mock interview features are unavailable until OPENAI_API_KEY is configured.'
+  });
+  return true;
+};
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -47,6 +60,10 @@ const getApplicationData = async (applicationId) => {
 
 // Initialize a mock interview
 exports.initializeMockInterview = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   const { applicationId, interviewMode, questionCount } = req.body;
   
   if (!applicationId || !interviewMode) {
@@ -169,6 +186,10 @@ Return the response in the following JSON format:
 
 // Process audio answer
 exports.processAnswer = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   // Use multer to handle file upload
   upload.single('audio')(req, res, async (err) => {
     if (err) {
@@ -301,6 +322,10 @@ exports.processAnswer = asyncHandler(async (req, res) => {
 
 // Get next question
 exports.getNextQuestion = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   const { applicationId, interviewMode, currentQuestionId, answer, questionCount, requiredQuestionsCount } = req.body;
   
   if (!applicationId || !interviewMode || !currentQuestionId || !answer) {
@@ -393,6 +418,10 @@ Return the response in the following JSON format:
 
 // Text to speech conversion
 exports.textToSpeech = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   const { text } = req.body;
   
   if (!text) {
@@ -431,6 +460,10 @@ exports.textToSpeech = asyncHandler(async (req, res) => {
 
 // Determine interview mode
 exports.determineInterviewMode = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   const { 
     applicationId, 
     jobTitle, 
@@ -778,6 +811,10 @@ Keep the feedback concise and constructive.`;
 
 // Finalize interview and generate comprehensive feedback
 exports.finalizeMockInterview = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   const { applicationId, answers } = req.body;
   
   if (!applicationId) {
@@ -894,6 +931,10 @@ Return the response in the following JSON format:
 
 // Text to speech conversion
 exports.textToSpeech = asyncHandler(async (req, res) => {
+  if (respondIfAIDisabled(res)) {
+    return;
+  }
+
   const { text, voice = 'alloy' } = req.body;
   
   if (!text) {

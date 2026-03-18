@@ -1,17 +1,26 @@
 .notification-dropdown-container {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
 }
 
 .notification-bell-button {
-  background: none;
-  border: none;
-  cursor: pointer;
+  min-width: 2.65rem;
+  min-height: 2.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: var(--radius-sm);
   position: relative;
-  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: rgba(226, 232, 240, 0.82);
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.notification-bell-button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(94, 231, 255, 0.2);
 }
 
 .notification-bell-icon {
@@ -21,29 +30,34 @@
 
 .notification-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  background-color: #ff4757;
+  top: -0.3rem;
+  right: -0.3rem;
+  background-color: var(--signal-alert);
   color: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 0.7rem;
+  border-radius: 999px;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.2rem;
+  font-size: 0.68rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border: 2px solid rgba(9, 17, 31, 0.92);
 }
 
 .notification-dropdown {
   position: absolute;
   right: 0;
-  top: 100%;
-  width: 350px;
+  top: calc(100% + 0.75rem);
+  width: min(350px, calc(100vw - 2rem));
   max-height: 500px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay);
   z-index: 1000;
   overflow: hidden;
   display: flex;
@@ -54,29 +68,29 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid #eee;
+  padding: 1rem 1rem 0.9rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .notification-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
 .mark-all-read-button {
   background: none;
   border: none;
-  color: #3498db;
-  cursor: pointer;
-  font-size: 0.8rem;
+  color: var(--signal-ai-deep);
+  font-size: 0.76rem;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
 }
 
 .mark-all-read-button:hover {
-  text-decoration: underline;
+  color: var(--signal-active);
 }
 
 .notification-list {
@@ -88,21 +102,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
-  border-bottom: 1px solid #f1f1f1;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   transition: background-color 0.2s;
 }
 
 .notification-item:hover {
-  background-color: #f9f9f9;
+  background-color: rgba(59, 130, 246, 0.04);
 }
 
 .notification-item.unread {
-  background-color: #edf6ff;
+  background-color: rgba(94, 231, 255, 0.08);
 }
 
 .notification-item.unread:hover {
-  background-color: #e1f0ff;
+  background-color: rgba(94, 231, 255, 0.12);
 }
 
 .notification-content {
@@ -112,13 +127,14 @@
 
 .notification-message {
   font-size: 0.9rem;
-  margin-bottom: 5px;
-  color: #333;
+  margin-bottom: 0.3rem;
+  color: var(--text-strong);
 }
 
 .notification-time {
-  font-size: 0.75rem;
-  color: #888;
+  font-size: 0.72rem;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
 }
 
 .notification-actions {
@@ -129,15 +145,14 @@
 .notification-action-button {
   background: none;
   border: none;
-  cursor: pointer;
-  color: #aaa;
-  padding: 5px;
+  color: var(--text-soft);
+  padding: 0.35rem;
   font-size: 0.8rem;
   transition: color 0.2s;
 }
 
 .notification-action-button:hover {
-  color: #e74c3c;
+  color: var(--signal-alert);
 }
 
 .notification-loading,
@@ -150,5 +165,5 @@
 }
 
 .notification-error {
-  color: #e74c3c;
-} 
+  color: var(--signal-alert);
+}

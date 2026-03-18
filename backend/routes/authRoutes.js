@@ -2,8 +2,35 @@ const express = require('express');
 const router = express.Router();
 const { upload } = require('../middleware/uploadMiddleware');
 const { protect, candidateOnly, recruiterOnly } = require('../middleware/authMiddleware');
-const { registerCandidate, loginCandidate, getCandidateProfile, updateCandidateProfile } = require('../controllers/candidateController');
-const { registerRecruiter, loginRecruiter, getRecruiterProfile, updateRecruiterProfile } = require('../controllers/recruiterController');
+const {
+  googleCredentialLimiter,
+  loginLimiter,
+  passwordResetLimiter,
+  registrationLimiter
+} = require('../middleware/authRateLimitMiddleware');
+const {
+  registerCandidate,
+  loginCandidate,
+  getCandidateProfile,
+  updateCandidateProfile,
+  getCandidateDashboardSummary
+} = require('../controllers/candidateController');
+const {
+  registerRecruiter,
+  loginRecruiter,
+  getRecruiterProfile,
+  updateRecruiterProfile,
+  getRecruiterDashboardSummary
+} = require('../controllers/recruiterController');
+const {
+  startGoogleAuth,
+  handleGoogleAuthCallback,
+  authenticateWithGoogleCredential
+} = require('../controllers/googleAuthController');
+const {
+  requestPasswordReset,
+  resetPassword
+} = require('../controllers/passwordResetController');
 const fs = require('fs');
 const path = require('path');
 
@@ -14,15 +41,37 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Candidate routes
-router.post('/candidate/register', upload.single('resume'), registerCandidate);
-router.post('/candidate/login', loginCandidate);
+router.get('/:role/google', startGoogleAuth);
+router.get('/google/callback', handleGoogleAuthCallback);
+router.post('/google/credential', googleCredentialLimiter, authenticateWithGoogleCredential);
+router.post('/:role/forgot-password', passwordResetLimiter, requestPasswordReset);
+router.post('/:role/reset-password/:token', passwordResetLimiter, resetPassword);
+router.post('/candidate/register', registrationLimiter, upload.single('resume'), registerCandidate);
+router.post('/candidate/login', loginLimiter, loginCandidate);
 router.get('/candidate/profile', protect, candidateOnly, getCandidateProfile);
-router.put('/candidate/profile', protect, candidateOnly, upload.single('resume'), updateCandidateProfile);
+router.put(
+  '/candidate/profile',
+  protect,
+  candidateOnly,
+  upload.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'profilePicture', maxCount: 1 },
+  ]),
+  updateCandidateProfile
+);
+router.get('/candidate/dashboard-summary', protect, candidateOnly, getCandidateDashboardSummary);
 
 // Recruiter routes
-router.post('/recruiter/register', registerRecruiter);
-router.post('/recruiter/login', loginRecruiter);
+router.post('/recruiter/register', registrationLimiter, registerRecruiter);
+router.post('/recruiter/login', loginLimiter, loginRecruiter);
 router.get('/recruiter/profile', protect, recruiterOnly, getRecruiterProfile);
-router.put('/recruiter/profile', protect, recruiterOnly, updateRecruiterProfile);
+router.put(
+  '/recruiter/profile',
+  protect,
+  recruiterOnly,
+  upload.fields([{ name: 'profilePicture', maxCount: 1 }]),
+  updateRecruiterProfile
+);
+router.get('/recruiter/dashboard-summary', protect, recruiterOnly, getRecruiterDashboardSummary);
 
 module.exports = router; 

@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -11,6 +12,14 @@ const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 // Load environment variables
 dotenv.config();
 console.log('Loaded environment variables from backend directory');
+
+if (!process.env.MONGODB_URI) {
+  throw new Error('Missing MONGODB_URI environment variable');
+}
+
+if (!process.env.JWT_SECRET) {
+  throw new Error('Missing JWT_SECRET environment variable');
+}
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
@@ -30,11 +39,19 @@ const mockInterviewRoutes = require('./routes/mockInterviewRoutes');
 
 // Initialize Express app
 const app = express();
+const allowedOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowInsecureSocketAuth =
+  process.env.NODE_ENV !== 'production' &&
+  process.env.ALLOW_INSECURE_SOCKET_AUTH === 'true';
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // In production, restrict this to your frontend URL
-    methods: ['GET', 'POST']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -45,8 +62,16 @@ global.io = io;
 module.exports = { io };
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Make uploads folder accessible
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -74,27 +99,30 @@ app.get('/', (req, res) => {
 
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
-  
-  // Log the authentication attempt
-  console.log(`Socket authentication attempt for ${socket.id}`);
-  
+
   if (!token) {
-    console.warn(`Socket connection for ${socket.id} has no token, but allowing connection for development`);
-    socket.userId = 'anonymous-' + Math.random().toString(36).substring(2, 15);
-    return next(); // Allow connection without token for development
+    if (allowInsecureSocketAuth) {
+      socket.userId = `anonymous-${Math.random().toString(36).slice(2, 10)}`;
+      socket.userRole = 'anonymous';
+      return next();
+    }
+
+    return next(new Error('Authentication required'));
   }
   
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.userId = decoded.id;
-    console.log(`Socket authentication successful for user ${socket.userId} (Socket ID: ${socket.id})`);
-    next(); // Proceed to the connection event
-  } catch (err) {
-    console.error(`Socket authentication failed for ${socket.id}: ${err.message}`);
-    // For development, allow connection even with invalid token
-    console.warn('Allowing connection despite invalid token for development purposes');
-    socket.userId = 'invalid-' + Math.random().toString(36).substring(2, 15);
+    socket.userRole = decoded.role;
     next();
+  } catch (err) {
+    if (allowInsecureSocketAuth) {
+      socket.userId = `invalid-${Math.random().toString(36).slice(2, 10)}`;
+      socket.userRole = 'anonymous';
+      return next();
+    }
+
+    return next(new Error('Invalid authentication token'));
   }
 });
 
@@ -111,7 +139,7 @@ io.on('connection', (socket) => {
   }
   
 
-  console.log('User connected:', socket.id); // This might be redundant now
+  console.log(`Socket connected ${socket.id} for user ${socket.userId}`);
 
   socket.on('join-room', ({ interviewId, userType, userName }) => {
     socket.join(interviewId);

@@ -1,6 +1,6 @@
 const Notification = require('../models/notificationModel');
 const Interview = require('../models/interviewModel');
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/emailService');
 
 /**
  * Get all notifications for the current user
@@ -162,7 +162,7 @@ const createNotification = async (notificationData) => {
         // Convert mongoose document to plain object for socket emission
         const notificationObject = notification.toObject ? notification.toObject() : JSON.parse(JSON.stringify(notification));
         
-        global.io.emit('notification', {
+        global.io.to(`user-${notificationData.recipient.toString()}`).emit('notification', {
           ...notificationObject,
           recipientId: notificationData.recipient.toString()
         });
@@ -191,24 +191,7 @@ const createNotification = async (notificationData) => {
  */
 const sendEmailNotification = async (email, subject, html) => {
   try {
-    // Create reusable transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-    
-    // Send email
-    const info = await transporter.sendMail({
-      from: `"HireMe" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject,
-      html
-    });
+    const info = await sendEmail({ to: email, subject, html });
     
     console.log('Email sent:', info.messageId);
     return info;

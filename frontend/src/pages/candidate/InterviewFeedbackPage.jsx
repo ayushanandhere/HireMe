@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Row, Col, Card, Alert, Button } from 'react-bootstrap';
-import InterviewFeedback from '../../components/InterviewFeedback';
 import { interviewService } from '../../services/api';
 import '../../styles/CandidateFeedback.css';
 import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaInfoCircle } from 'react-icons/fa';
@@ -9,39 +7,33 @@ import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaInfoCircle } from 'rea
 const CandidateInterviewFeedbackPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
-  
+
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   useEffect(() => {
     const fetchInterviewDetails = async () => {
       try {
         setLoading(true);
-        
-        // Get interview details
         const response = await interviewService.getInterviewById(interviewId);
-        
         if (response.success) {
           setInterview(response.data);
         } else {
           setError('Failed to load interview details');
         }
       } catch (err) {
-        console.error('Error fetching interview details:', err);
         setError(err.message || 'Failed to load interview details');
       } finally {
         setLoading(false);
       }
     };
-    
-    if (interviewId) {
-      fetchInterviewDetails();
-    }
+
+    if (interviewId) fetchInterviewDetails();
   }, [interviewId]);
-  
-  const formatDateTime = (dateTimeStr) => {
-    return new Date(dateTimeStr).toLocaleString('en-US', {
+
+  const formatDateTime = (dateTimeStr) =>
+    new Date(dateTimeStr).toLocaleString('en-US', {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
@@ -50,182 +42,190 @@ const CandidateInterviewFeedbackPage = () => {
       minute: '2-digit',
       hour12: true
     });
-  };
-  
-  // Helper function to render stars based on score
+
   const renderStars = (score) => {
     const stars = [];
     const fullStars = Math.floor(score / 2);
     const hasHalfStar = score % 2 !== 0;
-    
-    for (let i = 0; i < 5; i++) {
-      if (i < fullStars) {
-        stars.push(<FaStar key={i} className="filled" />);
-      } else if (i === fullStars && hasHalfStar) {
-        stars.push(<FaStarHalfAlt key={i} className="half" />);
-      } else {
-        stars.push(<FaRegStar key={i} className="empty" />);
-      }
+
+    for (let i = 0; i < 5; i += 1) {
+      if (i < fullStars) stars.push(<FaStar key={i} className="filled" />);
+      else if (i === fullStars && hasHalfStar) stars.push(<FaStarHalfAlt key={i} className="half" />);
+      else stars.push(<FaRegStar key={i} className="empty" />);
     }
-    
-    return <div className="star-rating">{stars} <span className="ms-2">({score}/10)</span></div>;
+
+    return (
+      <div className="candidate-review-stars">
+        {stars}
+        <span>({score}/10)</span>
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div className="feedback-page-container">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p className="mt-3">Loading feedback...</p>
-        </div>
+      <div className="candidate-review-page page-shell">
+        <div className="candidate-review-loading">Loading feedback...</div>
       </div>
     );
   }
-  
+
   if (error) {
     return (
-      <div className="feedback-page-container">
-        <div className="error-container">
-          <p className="error-message">{error}</p>
-          <Button className="back-button mt-3" onClick={() => navigate('/dashboard/candidate/interviews')}>
-            <FaArrowLeft className="me-2" /> Back to Interviews
-          </Button>
-        </div>
+      <div className="candidate-review-page page-shell">
+        <div className="candidate-review-message error">{error}</div>
+        <button type="button" className="action-link ghost" onClick={() => navigate('/dashboard/candidate/interviews')}>
+          <FaArrowLeft /> Back to Interviews
+        </button>
       </div>
     );
   }
-  
+
   if (!interview) {
     return (
-      <div className="feedback-page-container">
-        <div className="error-container">
-          <p className="error-message">Interview not found or you don't have permission to view it.</p>
-          <Button className="back-button mt-3" onClick={() => navigate('/dashboard/candidate/interviews')}>
-            <FaArrowLeft className="me-2" /> Back to Interviews
-          </Button>
-        </div>
+      <div className="candidate-review-page page-shell">
+        <div className="candidate-review-message error">Interview not found or you do not have permission to view it.</div>
+        <button type="button" className="action-link ghost" onClick={() => navigate('/dashboard/candidate/interviews')}>
+          <FaArrowLeft /> Back to Interviews
+        </button>
       </div>
     );
   }
-  
+
   return (
-    <div className="feedback-page-container">
-      <div className="feedback-page-header">
-        <h1>Interview Feedback</h1>
-        <Link to="/dashboard/candidate/interviews" className="back-button">
-          <FaArrowLeft className="me-2" /> Back to Interviews
-        </Link>
-      </div>
-      
-      <div className="interview-details-card">
-        <div className="card-body">
-          <h4>Interview Details</h4>
-          <div className="detail-row">
-            <div className="detail-item">
-              <div className="detail-label">Position</div>
-              <div className="detail-value">{interview.position.title}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Company</div>
-              <div className="detail-value">{interview.recruiter?.company || 'Not specified'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Interviewer</div>
-              <div className="detail-value">{interview.recruiter?.name || 'Not specified'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Date & Time</div>
-              <div className="detail-value">{formatDateTime(interview.scheduledDateTime)}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {(!interview.feedback || !interview.feedback.isShared) ? (
-        <div className="no-feedback">
-          <div className="no-feedback-icon">
-            <FaInfoCircle />
-          </div>
-          <div className="no-feedback-message">
-            Feedback for this interview is not yet available or has not been shared with you.
-          </div>
-          <p className="text-muted">
-            Once the recruiter shares feedback, you'll be able to view your performance assessment here.
+    <div className="candidate-review-page page-shell">
+      <section className="candidate-review-hero">
+        <article className="candidate-review-hero-copy instrument-card">
+          <span className="eyebrow eyebrow-dark">Interview feedback</span>
+          <h1>See what signal came out of the interview.</h1>
+          <p>
+            When feedback is shared, this page gives you a structured view of strengths, gaps, and the
+            recruiter’s evaluation across core dimensions.
           </p>
+          <div className="candidate-review-hero-actions">
+            <Link to="/dashboard/candidate/interviews" className="action-link signal">
+              <FaArrowLeft /> Back to Interviews
+            </Link>
+          </div>
+        </article>
+
+        <article className="candidate-review-summary surface-card">
+          <div className="candidate-review-summary-row">
+            <span>Position</span>
+            <strong>{interview.position?.title || 'Not specified'}</strong>
+          </div>
+          <div className="candidate-review-summary-row">
+            <span>Company</span>
+            <strong>{interview.recruiter?.company || 'Not specified'}</strong>
+          </div>
+          <div className="candidate-review-summary-row">
+            <span>Interviewed</span>
+            <strong>{formatDateTime(interview.scheduledDateTime)}</strong>
+          </div>
+        </article>
+      </section>
+
+      <section className="candidate-review-details surface-card">
+        <div className="candidate-review-details-grid">
+          <div className="candidate-review-detail-item">
+            <span>Position</span>
+            <strong>{interview.position?.title || 'Not specified'}</strong>
+          </div>
+          <div className="candidate-review-detail-item">
+            <span>Company</span>
+            <strong>{interview.recruiter?.company || 'Not specified'}</strong>
+          </div>
+          <div className="candidate-review-detail-item">
+            <span>Interviewer</span>
+            <strong>{interview.recruiter?.name || 'Not specified'}</strong>
+          </div>
+          <div className="candidate-review-detail-item">
+            <span>Date & Time</span>
+            <strong>{formatDateTime(interview.scheduledDateTime)}</strong>
+          </div>
         </div>
+      </section>
+
+      {(!interview.feedback || !interview.feedback.isShared) ? (
+        <section className="candidate-review-empty surface-card">
+          <FaInfoCircle />
+          <h3>Feedback is not available yet</h3>
+          <p>
+            The recruiter has not shared feedback for this interview yet. Once it is shared, your
+            performance assessment will appear here.
+          </p>
+        </section>
       ) : (
-        <div className="feedback-content">
-          <div className="feedback-score-card">
-            <div className="card-header">Performance Overview</div>
-            <div className="card-body">
-              <div className="overall-score-container">
-                <div className="overall-score-circle">
-                  <div className="overall-score-value">{interview.feedback.overall.score}</div>
-                </div>
-                <div className="overall-score-label">Overall Score</div>
-                {renderStars(interview.feedback.overall.score)}
-              </div>
-              
-              <div className="skill-score">
-                <div className="skill-header">
-                  <div className="skill-name">Technical Skills</div>
-                  <div className="skill-value">{interview.feedback.technical.score}</div>
-                </div>
-                <div className="skill-bar">
-                  <div className="skill-progress" style={{ width: `${interview.feedback.technical.score * 10}%` }}></div>
-                </div>
-                {interview.feedback.technical.comments && (
-                  <div className="skill-comment">{interview.feedback.technical.comments}</div>
-                )}
-              </div>
-              
-              <div className="skill-score">
-                <div className="skill-header">
-                  <div className="skill-name">Communication Skills</div>
-                  <div className="skill-value">{interview.feedback.communication.score}</div>
-                </div>
-                <div className="skill-bar">
-                  <div className="skill-progress" style={{ width: `${interview.feedback.communication.score * 10}%` }}></div>
-                </div>
-                {interview.feedback.communication.comments && (
-                  <div className="skill-comment">{interview.feedback.communication.comments}</div>
-                )}
-              </div>
+        <section className="candidate-review-grid">
+          <article className="candidate-review-card surface-card">
+            <div className="candidate-review-card-head">
+              <span className="eyebrow">Overview</span>
+              <h2>Performance snapshot</h2>
             </div>
-          </div>
-          
-          <div className="feedback-score-card">
-            <div className="card-header">Detailed Assessment</div>
-            <div className="card-body">
-              <div className="skill-score">
-                <div className="skill-header">
-                  <div className="skill-name">Problem-Solving Skills</div>
-                  <div className="skill-value">{interview.feedback.problemSolving.score}</div>
-                </div>
-                <div className="skill-bar">
-                  <div className="skill-progress" style={{ width: `${interview.feedback.problemSolving.score * 10}%` }}></div>
-                </div>
-                {interview.feedback.problemSolving.comments && (
-                  <div className="skill-comment">{interview.feedback.problemSolving.comments}</div>
-                )}
+
+            <div className="candidate-review-score-ring">
+              <div className="candidate-review-score-circle">
+                <span>{interview.feedback.overall.score}</span>
               </div>
-              
-              <div className="skill-score mt-4">
-                <div className="skill-header">
-                  <div className="skill-name">Overall Assessment</div>
-                </div>
-                {interview.feedback.overall.comments ? (
-                  <div className="skill-comment">{interview.feedback.overall.comments}</div>
-                ) : (
-                  <div className="text-muted">No additional comments provided.</div>
-                )}
-              </div>
+              <strong>Overall Score</strong>
+              {renderStars(interview.feedback.overall.score)}
             </div>
-          </div>
-        </div>
+
+            <div className="candidate-review-skill">
+              <div className="candidate-review-skill-head">
+                <span>Technical Skills</span>
+                <strong>{interview.feedback.technical.score}</strong>
+              </div>
+              <div className="candidate-review-bar">
+                <div className="candidate-review-progress" style={{ width: `${interview.feedback.technical.score * 10}%` }} />
+              </div>
+              {interview.feedback.technical.comments ? (
+                <p className="candidate-review-comment">{interview.feedback.technical.comments}</p>
+              ) : null}
+            </div>
+
+            <div className="candidate-review-skill">
+              <div className="candidate-review-skill-head">
+                <span>Communication Skills</span>
+                <strong>{interview.feedback.communication.score}</strong>
+              </div>
+              <div className="candidate-review-bar">
+                <div className="candidate-review-progress" style={{ width: `${interview.feedback.communication.score * 10}%` }} />
+              </div>
+              {interview.feedback.communication.comments ? (
+                <p className="candidate-review-comment">{interview.feedback.communication.comments}</p>
+              ) : null}
+            </div>
+          </article>
+
+          <article className="candidate-review-card surface-card">
+            <div className="candidate-review-card-head">
+              <span className="eyebrow">Assessment</span>
+              <h2>Detailed evaluation</h2>
+            </div>
+
+            <div className="candidate-review-skill">
+              <div className="candidate-review-skill-head">
+                <span>Problem Solving</span>
+                <strong>{interview.feedback.problemSolving.score}</strong>
+              </div>
+              <div className="candidate-review-bar">
+                <div className="candidate-review-progress" style={{ width: `${interview.feedback.problemSolving.score * 10}%` }} />
+              </div>
+              {interview.feedback.problemSolving.comments ? (
+                <p className="candidate-review-comment">{interview.feedback.problemSolving.comments}</p>
+              ) : null}
+            </div>
+
+            <div className="candidate-review-overall">
+              <h3>Overall Assessment</h3>
+              <p>{interview.feedback.overall.comments || 'No additional comments were provided.'}</p>
+            </div>
+          </article>
+        </section>
       )}
     </div>
   );
 };
 
-export default CandidateInterviewFeedbackPage; 
+export default CandidateInterviewFeedbackPage;
