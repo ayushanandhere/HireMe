@@ -8,6 +8,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+const videoService = require('./services/videoService');
 
 // Load environment variables
 dotenv.config();
@@ -56,6 +57,7 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 5000;
+const videoRooms = new Map();
 
 // Export the Socket.io instance for use in other modules
 global.io = io;
@@ -126,6 +128,74 @@ io.use((socket, next) => {
   }
 });
 
+const getInterviewRoomName = (interviewId) => `interview-${interviewId}`;
+
+const serializeRoomParticipant = (participant) => ({
+  userId: participant.userId,
+  userName: participant.userName,
+  userRole: participant.userRole,
+  socketId: participant.socketId,
+  joinedAt: participant.joinedAt,
+  mediaState: participant.mediaState
+});
+
+const getOrCreateVideoRoom = (interviewId) => {
+  if (!videoRooms.has(interviewId)) {
+    videoRooms.set(interviewId, {
+      interviewId,
+      participants: new Map()
+    });
+  }
+
+  return videoRooms.get(interviewId);
+};
+
+const emitVideoRoomState = (interviewId) => {
+  const room = videoRooms.get(interviewId);
+  const participants = room
+    ? Array.from(room.participants.values()).map(serializeRoomParticipant)
+    : [];
+
+  io.to(getInterviewRoomName(interviewId)).emit('video:room-state', {
+    interviewId,
+    participants,
+    participantCount: participants.length
+  });
+};
+
+const removeSocketFromVideoRoom = (socket, interviewId = socket.data?.videoInterviewId) => {
+  if (!interviewId) {
+    return;
+  }
+
+  const room = videoRooms.get(interviewId);
+  if (!room) {
+    return;
+  }
+
+  const existingParticipant = room.participants.get(socket.userId);
+  if (!existingParticipant || existingParticipant.socketId !== socket.id) {
+    return;
+  }
+
+  room.participants.delete(socket.userId);
+  socket.leave(getInterviewRoomName(interviewId));
+  socket.data.videoInterviewId = undefined;
+
+  io.to(getInterviewRoomName(interviewId)).emit('video:participant-left', {
+    interviewId,
+    userId: existingParticipant.userId,
+    userName: existingParticipant.userName,
+    userRole: existingParticipant.userRole
+  });
+
+  if (room.participants.size === 0) {
+    videoRooms.delete(interviewId);
+  } else {
+    emitVideoRoomState(interviewId);
+  }
+};
+
 
 io.on('connection', (socket) => {
  
@@ -141,32 +211,135 @@ io.on('connection', (socket) => {
 
   console.log(`Socket connected ${socket.id} for user ${socket.userId}`);
 
-  socket.on('join-room', ({ interviewId, userType, userName }) => {
-    socket.join(interviewId);
-    console.log(`${userName} (${userType}) joined room: ${interviewId}`);
-    
-    socket.to(interviewId).emit('user-joined', { userType, userName });
+  socket.on('video:join-room', async ({ interviewId, userName }, callback = () => {}) => {
+    try {
+      if (!interviewId) {
+        throw new Error('Interview ID is required');
+      }
+
+      await videoService.getMeetingDetails(
+        interviewId,
+        { _id: socket.userId, role: socket.userRole },
+        process.env.FRONTEND_URL || ''
+      );
+
+      const room = getOrCreateVideoRoom(interviewId);
+      const currentParticipant = room.participants.get(socket.userId);
+
+      if (room.participants.size >= 2 && !currentParticipant) {
+        throw new Error('This interview room already has two active participants');
+      }
+
+      if (currentParticipant && currentParticipant.socketId !== socket.id) {
+        io.to(currentParticipant.socketId).emit('video:session-replaced', {
+          interviewId,
+          message: 'This interview room was opened in another tab or browser window.'
+        });
+
+        const existingSocket = io.sockets.sockets.get(currentParticipant.socketId);
+        if (existingSocket) {
+          existingSocket.leave(getInterviewRoomName(interviewId));
+          existingSocket.data.videoInterviewId = undefined;
+        }
+      }
+
+      const participant = {
+        userId: socket.userId,
+        userName: userName || socket.userRole,
+        userRole: socket.userRole,
+        socketId: socket.id,
+        joinedAt: new Date().toISOString(),
+        mediaState: currentParticipant?.mediaState || {
+          hasMedia: false,
+          audioEnabled: false,
+          videoEnabled: false,
+          screenSharing: false
+        }
+      };
+
+      room.participants.set(socket.userId, participant);
+      socket.join(getInterviewRoomName(interviewId));
+      socket.data.videoInterviewId = interviewId;
+      socket.data.videoUserName = participant.userName;
+
+      emitVideoRoomState(interviewId);
+
+      callback({
+        success: true,
+        participant: serializeRoomParticipant(participant),
+        participants: Array.from(room.participants.values()).map(serializeRoomParticipant)
+      });
+    } catch (error) {
+      callback({
+        success: false,
+        message: error.message || 'Failed to join interview room'
+      });
+    }
   });
-  
-  socket.on('call-user', ({ interviewId, signalData, from }) => {
-    console.log(`Call initiated in room ${interviewId} by ${from}`);
-    socket.to(interviewId).emit('call-user', { signal: signalData, from });
+
+  socket.on('video:media-state', ({ interviewId, mediaState = {} }, callback = () => {}) => {
+    const room = videoRooms.get(interviewId);
+    const participant = room?.participants.get(socket.userId);
+
+    if (!room || !participant || participant.socketId !== socket.id) {
+      callback({
+        success: false,
+        message: 'Join the interview room before updating media state'
+      });
+      return;
+    }
+
+    participant.mediaState = {
+      hasMedia: Boolean(mediaState.hasMedia),
+      audioEnabled: Boolean(mediaState.audioEnabled),
+      videoEnabled: Boolean(mediaState.videoEnabled),
+      screenSharing: Boolean(mediaState.screenSharing)
+    };
+
+    emitVideoRoomState(interviewId);
+    callback({ success: true });
   });
-  
-  socket.on('answer-call', ({ interviewId, signal }) => {
-    console.log(`Call answered in room ${interviewId}`);
-    socket.to(interviewId).emit('call-accepted', signal);
+
+  socket.on('video:signal', ({ interviewId, targetUserId, signal }, callback = () => {}) => {
+    const room = videoRooms.get(interviewId);
+    const sender = room?.participants.get(socket.userId);
+    const target = room?.participants.get(targetUserId);
+
+    if (!room || !sender || sender.socketId !== socket.id) {
+      callback({
+        success: false,
+        message: 'Join the interview room before starting signaling'
+      });
+      return;
+    }
+
+    if (!target) {
+      callback({
+        success: false,
+        message: 'The other participant is not currently connected'
+      });
+      return;
+    }
+
+    io.to(target.socketId).emit('video:signal', {
+      interviewId,
+      fromUserId: sender.userId,
+      fromUserName: sender.userName,
+      fromUserRole: sender.userRole,
+      signal
+    });
+
+    callback({ success: true });
   });
-  
-  socket.on('end-call', ({ interviewId }) => {
-    console.log(`Call ended in room ${interviewId}`);
-    socket.to(interviewId).emit('call-ended');
+
+  socket.on('video:leave-room', ({ interviewId } = {}, callback = () => {}) => {
+    removeSocketFromVideoRoom(socket, interviewId);
+    callback({ success: true });
   });
-  
+
   socket.on('disconnect', () => {
-
+    removeSocketFromVideoRoom(socket);
     console.log(`User ${socket.userId || '(unknown; token likely expired or invalid)'} disconnected: ${socket.id}`);
-
   });
 });
 

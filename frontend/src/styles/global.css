@@ -60,19 +60,20 @@
 .action-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   justify-content: center;
   border-radius: var(--radius-sm);
-  padding: 0.9rem 1.15rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   border: 1px solid transparent;
+  white-space: nowrap;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
 .action-link.primary {
   background: var(--signal-positive);
   color: var(--ink-950);
-  box-shadow: 0 14px 30px rgba(18, 214, 160, 0.2);
 }
 
 .action-link.secondary {

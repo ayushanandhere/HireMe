@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { FiArrowLeft } from 'react-icons/fi';
 import InterviewFeedback from '../../components/InterviewFeedback';
 import { interviewService } from '../../services/api';
 import '../../styles/Feedback.css';
-import { FaArrowLeft } from 'react-icons/fa';
+
+const getStatusTone = (s) => {
+  if (['accepted', 'scheduled'].includes(s)) return 'positive';
+  if (s === 'completed') return 'active';
+  if (s === 'pending') return 'review';
+  if (['cancelled', 'rejected'].includes(s)) return 'alert';
+  return 'ai';
+};
 
 const RecruiterInterviewFeedbackPage = () => {
   const { interviewId } = useParams();
@@ -12,148 +20,93 @@ const RecruiterInterviewFeedbackPage = () => {
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [toast, setToast] = useState('');
 
   useEffect(() => {
-    const fetchInterviewDetails = async () => {
+    const fetch = async () => {
       try {
         setLoading(true);
-        const response = await interviewService.getInterviewById(interviewId);
-        if (response.success) {
-          setInterview(response.data);
-        } else {
-          setError('Failed to load interview details');
-        }
+        const res = await interviewService.getInterviewById(interviewId);
+        if (res.success) setInterview(res.data);
+        else setError('Failed to load interview details');
       } catch (err) {
         setError(err.message || 'Failed to load interview details');
       } finally {
         setLoading(false);
       }
     };
-
-    if (interviewId) fetchInterviewDetails();
+    if (interviewId) fetch();
   }, [interviewId]);
 
-  const formatDateTime = (dateTimeStr) =>
-    new Date(dateTimeStr).toLocaleString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-
   const handleFeedbackSubmitted = (feedbackData) => {
-    setSuccessMessage('Feedback submitted successfully.');
-    setInterview((prev) => ({
-      ...prev,
-      feedback: feedbackData
-    }));
+    setToast('Feedback saved successfully.');
+    setInterview((prev) => ({ ...prev, feedback: feedbackData }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => setToast(''), 4000);
   };
 
   if (loading) {
-    return <div className="review-shell-loading">Loading interview details...</div>;
-  }
-
-  if (error) {
     return (
-      <div className="review-shell page-shell">
-        <div className="review-message error">{error}</div>
-        <button type="button" className="action-link ghost" onClick={() => navigate('/dashboard/recruiter/interviews')}>
-          <FaArrowLeft /> Back to Interviews
-        </button>
+      <div className="fb-shell">
+        <div className="fb-loading">
+          <div className="fb-spinner" />
+          <p>Loading assessment…</p>
+        </div>
       </div>
     );
   }
 
-  if (!interview) {
+  if (error || !interview) {
     return (
-      <div className="review-shell page-shell">
-        <div className="review-message error">Interview not found or you do not have permission to view it.</div>
-        <button type="button" className="action-link ghost" onClick={() => navigate('/dashboard/recruiter/interviews')}>
-          <FaArrowLeft /> Back to Interviews
-        </button>
+      <div className="fb-shell">
+        <div className="fb-empty surface-card">
+          <span className="signal-chip alert">Error</span>
+          <h2>{error || 'Interview not found'}</h2>
+          <p>This session may have been removed or you don't have access.</p>
+          <button type="button" className="action-link secondary" onClick={() => navigate('/dashboard/recruiter/interviews')}>
+            <FiArrowLeft /> Back to Interviews
+          </button>
+        </div>
       </div>
     );
   }
+
+  const candidateName = interview.candidate?.name || 'Candidate';
+  const position = interview.position?.title || 'Position';
+  const status = interview.status || 'scheduled';
+  const dateStr = new Date(interview.scheduledDateTime).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+  });
 
   return (
-    <div className="review-shell page-shell">
-      <section className="review-hero">
-        <article className="review-hero-copy instrument-card">
-          <span className="eyebrow eyebrow-dark">Interview assessment</span>
-          <h1>Turn the conversation into usable hiring signal.</h1>
-          <p>
-            Score the candidate clearly across technical strength, communication, and problem solving,
-            then decide whether to share the assessment back.
-          </p>
-          <div className="review-hero-actions">
-            <Link to="/dashboard/recruiter/interviews" className="action-link signal">
-              <FaArrowLeft /> Back to Interviews
-            </Link>
-          </div>
-        </article>
+    <div className="fb-shell">
+      {toast && <div className="fb-toast">{toast}</div>}
 
-        <article className="review-summary surface-card">
-          <div className="review-summary-row">
-            <span>Candidate</span>
-            <strong>{interview.candidate?.name || 'Not specified'}</strong>
-          </div>
-          <div className="review-summary-row">
-            <span>Position</span>
-            <strong>{interview.position?.title || 'Not specified'}</strong>
-          </div>
-          <div className="review-summary-row">
-            <span>Status</span>
-            <strong>{interview.status}</strong>
-          </div>
-        </article>
-      </section>
-
-      {successMessage && <div className="review-message success">{successMessage}</div>}
-
-      <section className="review-details surface-card">
-        <div className="review-details-head">
-          <div>
-            <span className="eyebrow">Interview context</span>
-            <h2>What happened in this session</h2>
-          </div>
-          <span className="signal-chip ai">{formatDateTime(interview.scheduledDateTime)}</span>
-        </div>
-
-        <div className="review-detail-grid">
-          <div className="review-detail-item">
-            <span>Candidate</span>
-            <strong>{interview.candidate?.name || 'Not specified'}</strong>
-          </div>
-          <div className="review-detail-item">
-            <span>Position</span>
-            <strong>{interview.position?.title || 'Not specified'}</strong>
-          </div>
-          <div className="review-detail-item">
-            <span>Date & Time</span>
-            <strong>{formatDateTime(interview.scheduledDateTime)}</strong>
-          </div>
-          <div className="review-detail-item">
-            <span>Status</span>
-            <strong>{interview.status}</strong>
+      <header className="fb-header">
+        <div className="fb-header-text">
+          <h1>Interview Feedback</h1>
+          <div className="fb-header-meta">
+            <span>{candidateName}</span>
+            <span className="fb-dot" />
+            <span>{position}</span>
+            <span className="fb-dot" />
+            <span>{dateStr}</span>
+            <span className="fb-dot" />
+            <span className={`signal-chip ${getStatusTone(status)}`}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </span>
           </div>
         </div>
+      </header>
 
-        {interview.notes ? (
-          <div className="review-notes">
-            <h3>Interview Notes</h3>
-            <p>{interview.notes}</p>
-          </div>
-        ) : null}
-      </section>
+      {interview.notes && (
+        <div className="fb-notes surface-card">
+          <span className="fb-notes-label">Session notes</span>
+          <p>{interview.notes}</p>
+        </div>
+      )}
 
-      <section className="review-form-wrap surface-card">
-        <InterviewFeedback interviewId={interviewId} onFeedbackSubmitted={handleFeedbackSubmitted} />
-      </section>
+      <InterviewFeedback interviewId={interviewId} onFeedbackSubmitted={handleFeedbackSubmitted} />
     </div>
   );
 };

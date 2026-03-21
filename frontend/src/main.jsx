@@ -1,8 +1,3 @@
-// Polyfill for Node.js global objects needed by simple-peer
-window.global = window;
-window.process = { env: { DEBUG: undefined } };
-// Don't use require for Buffer
-
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import 'bootstrap/dist/css/bootstrap.min.css'

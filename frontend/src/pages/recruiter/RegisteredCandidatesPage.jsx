@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { buildAssetUrl, candidatesService } from '../../services/api';
 import {
-  FaArrowLeft,
   FaChartBar,
   FaDownload,
   FaEnvelope,
   FaEye,
-  FaFilter,
   FaSearch,
-  FaSortAmountDown,
   FaUserTie
 } from 'react-icons/fa';
 import './RegisteredCandidates.css';
@@ -23,10 +20,7 @@ const RegisteredCandidatesPage = () => {
 
   const fetchCandidates = async ({ background = false } = {}) => {
     try {
-      if (!background) {
-        setLoading(true);
-      }
-
+      if (!background) setLoading(true);
       const response = await candidatesService.getAllCandidates();
       if (response.success) {
         setCandidates(response.data);
@@ -36,23 +30,15 @@ const RegisteredCandidatesPage = () => {
     } catch (err) {
       setError(err.message || 'Error loading candidates. Please try again.');
     } finally {
-      if (!background) {
-        setLoading(false);
-      }
+      if (!background) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchCandidates();
 
-    const handleFocus = () => {
-      fetchCandidates({ background: true });
-    };
-
-    const intervalId = window.setInterval(() => {
-      fetchCandidates({ background: true });
-    }, 30000);
-
+    const handleFocus = () => fetchCandidates({ background: true });
+    const intervalId = window.setInterval(() => fetchCandidates({ background: true }), 30000);
     window.addEventListener('focus', handleFocus);
 
     return () => {
@@ -98,146 +84,105 @@ const RegisteredCandidatesPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="talent-pool-loading">
-        <div className="spinner"></div>
-        <p>Loading candidates...</p>
-      </div>
-    );
+    return <div className="tp-loading"><div className="tp-spinner" /><p>Loading...</p></div>;
   }
 
-  return (
-    <div className="talent-pool-page page-shell">
-      <section className="talent-pool-hero">
-        <article className="talent-pool-hero-copy instrument-card">
-          <span className="eyebrow eyebrow-dark">Talent pool</span>
-          <h1>Scan the wider candidate surface before opening a req.</h1>
-          <p>
-            Search the pool by signal, inspect resumes quickly, and jump into deeper analysis when a
-            profile deserves recruiter attention.
-          </p>
-          <div className="talent-pool-hero-actions">
-            <Link to="/dashboard/recruiter" className="action-link signal">
-              <FaArrowLeft /> Back to Dashboard
-            </Link>
-          </div>
-        </article>
+  const withResume = candidates.filter((candidate) => candidate.hasResume).length;
 
-        <article className="talent-pool-metrics surface-card">
-          <div className="talent-pool-metric">
-            <span>Total Candidates</span>
-            <strong>{candidates.length}</strong>
+  return (
+    <div className="tp-page page-shell">
+      <section className="tp-header">
+        <div className="tp-header-left">
+          <h1>Candidates</h1>
+          <div className="tp-header-meta">
+            <span className="signal-chip active">{candidates.length} total</span>
+            <span className="signal-chip positive">{withResume} with resume</span>
           </div>
-          <div className="talent-pool-metric">
-            <span>With Resume</span>
-            <strong>{candidates.filter((candidate) => candidate.hasResume).length}</strong>
-          </div>
-          <div className="talent-pool-metric">
-            <span>With Skills</span>
-            <strong>{candidates.filter((candidate) => candidate.skills).length}</strong>
-          </div>
-        </article>
+        </div>
+        <div className="tp-header-actions">
+          <Link to="/dashboard/recruiter" className="action-link ghost">
+            Dashboard
+          </Link>
+        </div>
       </section>
 
-      <section className="talent-pool-toolbar surface-card">
-        <div className="talent-pool-search">
-          <FaSearch className="talent-pool-search-icon" />
+      <div className="tp-search surface-card">
+        <div className="tp-search-field">
+          <FaSearch className="tp-search-icon" />
           <input
             type="text"
-            className="talent-pool-search-input"
+            className="tp-search-input"
             placeholder="Search by name, email, or skills..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="talent-pool-toolbar-actions">
-          <button type="button" className="talent-toolbar-button" disabled>
-            <FaFilter /> Filter
-          </button>
-          <button type="button" className="talent-toolbar-button" disabled>
-            <FaSortAmountDown /> Sort
-          </button>
-        </div>
-      </section>
+        <button type="button" className="tp-search-clear" onClick={() => setSearchTerm('')}>
+          Clear
+        </button>
+      </div>
 
-      {error && <div className="talent-pool-error">{error}</div>}
+      {error && <div className="tp-alert">{error}</div>}
 
       {filteredCandidates.length === 0 ? (
-        <section className="talent-pool-empty surface-card">
+        <section className="tp-empty surface-card">
           <FaUserTie />
           <h3>No candidates found</h3>
-          <p>{searchTerm ? 'No profiles match your current search.' : 'No candidates are available right now.'}</p>
+          <p>{searchTerm ? 'No profiles match your search.' : 'No candidates available yet.'}</p>
         </section>
       ) : (
-        <section className="talent-pool-grid">
+        <section className="tp-grid">
           {filteredCandidates.map((candidate) => (
-            <article key={candidate._id} className="talent-candidate-card surface-card">
-              <div className="talent-candidate-head">
+            <article key={candidate._id} className="tp-card surface-card">
+              <div className="tp-card-top">
                 {candidate.profilePictureUrl ? (
-                  <div className="talent-candidate-avatar talent-candidate-avatar-image">
+                  <div className="tp-avatar tp-avatar-img">
                     <img src={buildAssetUrl(candidate.profilePictureUrl)} alt={candidate.name} />
                   </div>
                 ) : (
-                  <div className="talent-candidate-avatar">{candidate.name.charAt(0).toUpperCase()}</div>
+                  <div className="tp-avatar">{candidate.name.charAt(0).toUpperCase()}</div>
                 )}
-                <div className="talent-candidate-meta">
-                  <h3>{candidate.name}</h3>
-                  <p><FaEnvelope /> {candidate.email}</p>
-                  <span>{candidate.headline || candidate.experience || 'Experience not specified'}</span>
-                  {candidate.location && <span>{candidate.location}</span>}
-                </div>
-              </div>
-
-              <div className="talent-candidate-signal">
                 {candidate.hasResume ? (
-                  <span className="signal-chip positive">Resume available</span>
+                  <span className="signal-chip positive">Resume</span>
                 ) : (
                   <span className="signal-chip review">No resume</span>
                 )}
               </div>
 
-              <div className="talent-candidate-skills">
-                {candidate.skills ? candidate.skills.split(',').slice(0, 4).map((skill) => (
-                  <span key={skill.trim()} className="talent-skill-chip">
-                    {skill.trim()}
-                  </span>
-                )) : (
-                  <span className="talent-skill-empty">No skills provided</span>
-                )}
+              <div className="tp-card-head">
+                <div>
+                  <h3>{candidate.name}</h3>
+                  <span>{candidate.headline || 'Candidate profile'}</span>
+                </div>
               </div>
 
-              <div className="talent-candidate-actions">
-                <Link
-                  to={`/dashboard/recruiter/candidates/${candidate._id}`}
-                  className="action-link secondary"
-                >
-                  <FaChartBar /> Analysis
-                </Link>
+              <div className="tp-card-meta">
+                <span><FaEnvelope /> {candidate.email}</span>
+                {candidate.location && <span>{candidate.location}</span>}
+              </div>
 
-                {candidate.hasResume ? (
+              {candidate.skills && (
+                <div className="tp-skills">
+                  {candidate.skills.split(',').slice(0, 5).map((skill) => (
+                    <span key={skill.trim()} className="tp-pill">{skill.trim()}</span>
+                  ))}
+                </div>
+              )}
+
+              <div className="tp-card-actions">
+                <Link to={`/dashboard/recruiter/candidates/${candidate._id}`} className="action-link secondary">
+                  <FaChartBar /> Profile
+                </Link>
+                {candidate.hasResume && (
                   <>
-                    <a
-                      href="#"
-                      className="action-link ghost"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        handleViewResume(candidate);
-                      }}
-                    >
-                      <FaEye /> View Resume
-                    </a>
-                    <a
-                      href="#"
-                      className="action-link ghost"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        handleDownloadResume(candidate);
-                      }}
-                    >
+                    <button type="button" className="action-link ghost" onClick={() => handleViewResume(candidate)}>
+                      <FaEye /> View
+                    </button>
+                    <button type="button" className="action-link ghost" onClick={() => handleDownloadResume(candidate)}>
                       <FaDownload /> Download
-                    </a>
+                    </button>
                   </>
-                ) : null}
+                )}
               </div>
             </article>
           ))}

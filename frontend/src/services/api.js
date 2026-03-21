@@ -932,6 +932,51 @@ export const aiTrainingService = {
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Network error' };
     }
+  },
+
+  async listTrainingConversations(applicationId) {
+    try {
+      const response = await api.get(`/ai/training-conversations/${applicationId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Network error' };
+    }
+  },
+
+  async createTrainingConversation(applicationId, payload = {}) {
+    try {
+      const response = await api.post(`/ai/training-conversations/${applicationId}`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Network error' };
+    }
+  },
+
+  async getTrainingConversation(conversationId) {
+    try {
+      const response = await api.get(`/ai/training-conversation/${conversationId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Network error' };
+    }
+  },
+
+  async updateTrainingConversation(conversationId, payload) {
+    try {
+      const response = await api.patch(`/ai/training-conversation/${conversationId}`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Network error' };
+    }
+  },
+
+  async deleteTrainingConversation(conversationId) {
+    try {
+      const response = await api.delete(`/ai/training-conversation/${conversationId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Network error' };
+    }
   }
 };
 

@@ -13,30 +13,19 @@ const RecruiterLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return;
-    }
-    
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    
-    // Clear any previous errors
+    if (!email || !password) { setError('Please fill in all fields'); return; }
+    if (!email.includes('@')) { setError('Please enter a valid email'); return; }
+
     setError('');
     setLoading(true);
-    
+
     try {
       const response = await recruiterService.login(email, password);
-      
       if (response.success) {
         navigate(authService.getDefaultRoute(response.data));
       }
-    } catch (error) {
-      setError(error.message || 'Invalid email or password');
+    } catch (err) {
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -46,67 +35,42 @@ const RecruiterLoginPage = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h2>Recruiter Login</h2>
-          <p className="auth-subtitle">Sign in to access your recruiter dashboard</p>
+          <h2>Recruiter sign in</h2>
         </div>
-        
+
         {error && <div className="auth-error">{error}</div>}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              className="form-control"
-              placeholder="your@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <input type="email" id="email" className="form-control" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              className="form-control"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <input type="password" id="password" className="form-control" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          
           <div className="forgot-password">
-            <Link to="/forgot-password?role=recruiter" className="auth-link">Forgot Password?</Link>
+            <Link to="/forgot-password?role=recruiter" className="auth-link">Forgot password?</Link>
           </div>
-          
           <div className="form-action">
             <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </div>
         </form>
-        
-        <div className="divider">
-          <span>or</span>
-        </div>
-        
+
+        <div className="divider"><span>or</span></div>
+
         <div className="social-login">
-          <GoogleAuthButton
-            role="recruiter"
-            mode="login"
-            onError={setError}
-            onSuccess={(user) => navigate(authService.getDefaultRoute(user))}
-          />
+          <GoogleAuthButton role="recruiter" mode="login" onError={setError} onSuccess={(user) => navigate(authService.getDefaultRoute(user))} />
         </div>
-        
+
         <div className="auth-footer">
-          Don't have an account? <Link to="/register/recruiter" className="auth-link">Register here</Link>
+          No account? <Link to="/register/recruiter" className="auth-link">Register</Link>
         </div>
       </div>
     </div>
   );
 };
 
-export default RecruiterLoginPage; 
+export default RecruiterLoginPage;

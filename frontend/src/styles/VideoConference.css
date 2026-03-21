@@ -1,584 +1,717 @@
-.conference-shell {
-  padding-bottom: 4.5rem;
+/* ─── Video Conference – Immersive Layout ─── */
+
+.vc-shell {
+  padding: 0;
 }
 
-.conference-layout {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.conference-hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
-  gap: 1.25rem;
-}
-
-.conference-overview,
-.conference-brief,
-.conference-video-stage,
-.conference-feedback-shell,
-.conference-state-card {
-  position: relative;
+.vc-layout {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 5rem);
+  gap: 0.35rem;
   overflow: hidden;
 }
 
-.conference-overview {
-  padding: 1.8rem;
-}
+/* ── Loading / Error ── */
 
-.conference-overview::after,
-.conference-brief::after,
-.conference-video-stage::after,
-.conference-feedback-shell::after,
-.conference-state-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.36), transparent 78%);
-  pointer-events: none;
-}
-
-.conference-overview-head,
-.conference-stage-header,
-.conference-feedback-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.conference-overview h1,
-.conference-stage-header h2,
-.conference-feedback-head h2,
-.conference-state-card h1 {
-  margin: 1rem 0 0.8rem;
-  font-family: var(--font-sans);
-  font-size: clamp(2rem, 4vw, 3.35rem);
-  line-height: 0.95;
-  letter-spacing: -0.06em;
-}
-
-.conference-stage-header h2,
-.conference-feedback-head h2 {
-  margin: 0.85rem 0 0;
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-}
-
-.conference-overview p,
-.conference-feedback-head p,
-.conference-state-card p {
-  margin: 0;
-  max-width: 58rem;
-  color: inherit;
-  line-height: 1.75;
-}
-
-.conference-highlight-grid,
-.conference-detail-list,
-.conference-guidance {
+.vc-center {
+  min-height: 50vh;
   display: grid;
-  gap: 0.9rem;
+  place-items: center;
 }
 
-.conference-highlight-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 1.6rem;
+.vc-loading-card {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
-.conference-highlight-card,
-.conference-detail-list > div,
-.conference-guidance > div,
-.conference-state-card-light {
+.vc-spinner {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0 auto 0.75rem;
+  border: 2px solid rgba(148, 163, 184, 0.15);
+  border-top-color: var(--signal-active);
+  border-radius: 50%;
+  animation: vc-spin 0.7s linear infinite;
+}
+
+.vc-error-card {
+  max-width: 26rem;
+  padding: 1.5rem;
   border-radius: var(--radius-md);
+  text-align: center;
 }
 
-.conference-highlight-card {
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(148, 163, 184, 0.16);
+.vc-error-card .signal-chip { margin-bottom: 0.75rem; }
+
+.vc-error-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
 }
 
-.conference-highlight-card span,
-.conference-detail-list span,
-.conference-stage-meta-item {
-  display: inline-flex;
+.vc-error-card p {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* ── Header – single compact bar ── */
+
+.vc-header {
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  color: rgba(148, 163, 184, 0.9);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  flex-shrink: 0;
 }
 
-.conference-highlight-card strong,
-.conference-detail-list strong {
-  display: block;
-  margin-top: 0.35rem;
+.vc-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex-shrink: 0;
+  border-radius: 0.4rem;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--text-strong);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.vc-back:hover {
+  background: var(--ink-950);
+  color: white;
+  border-color: var(--ink-950);
+}
+
+.vc-header-center {
+  flex: 1;
+  min-width: 0;
+}
+
+.vc-header-center h1 {
+  margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: inherit;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.conference-brief {
-  padding: 1.5rem;
+.vc-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  color: var(--text-soft);
 }
 
-.conference-detail-list {
-  margin-top: 1rem;
+.vc-header-meta .signal-chip {
+  height: 1.1rem;
+  padding: 0 0.35rem;
+  font-size: 0.55rem;
 }
 
-.conference-detail-list > div {
-  padding: 1rem;
-  border: 1px solid var(--line);
-  background: rgba(248, 250, 252, 0.72);
+.vc-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.35);
+  flex-shrink: 0;
 }
 
-.conference-guidance {
-  margin-top: 1.1rem;
+/* Toast – fixed overlay */
+.vc-toast {
+  position: fixed;
+  top: 3.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: vc-toast-in 300ms ease;
 }
 
-.conference-guidance > div {
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--line);
+.vc-toast.positive {
+  background: rgba(18, 214, 160, 0.15);
+  color: #0b7c61;
+  border: 1px solid rgba(18, 214, 160, 0.2);
 }
 
-.conference-guidance p {
-  margin: 0.7rem 0 0;
-  color: var(--text-muted);
-  line-height: 1.65;
+.vc-toast.alert {
+  background: rgba(242, 85, 85, 0.12);
+  color: #c81e1e;
+  border: 1px solid rgba(242, 85, 85, 0.15);
 }
 
-.conference-video-stage,
-.conference-feedback-shell {
-  padding: 1.5rem;
+/* ── Video Room – fills remaining viewport ── */
+
+.vc-room {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.conference-video-wrap {
-  margin-top: 1.25rem;
+/* Fullscreen overrides */
+.vc-room:fullscreen {
+  background: #0c1220;
+  padding: 0.5rem;
 }
 
-.conference-stage-meta {
+.vc-room:fullscreen .vc-tiles {
+  border-radius: 0;
+}
+
+.vc-room:fullscreen .vc-tile {
+  border-radius: 0.5rem;
+}
+
+/* ── Recruiter Top Bar ── */
+
+.vc-top-bar {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.vc-top-complete {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.4rem;
+  border: none;
+  background: #0b7c61;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(11, 124, 97, 0.4);
+}
+
+.vc-top-complete:hover {
+  background: #0a6b54;
+  box-shadow: 0 3px 14px rgba(11, 124, 97, 0.5);
+}
+
+.vc-top-complete:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vc-top-feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.4rem;
+  border: none;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  color: #f1f5f9;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 140ms ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.vc-top-feedback:hover {
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+}
+
+/* Device warning – above tiles, in flow */
+.vc-warning {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  flex-wrap: wrap;
+  padding: 0.4rem 0.65rem;
+  flex-shrink: 0;
+  border-radius: 0.45rem;
+  background: rgba(8, 145, 178, 0.05);
+  border: 1px solid rgba(8, 145, 178, 0.1);
+  margin-bottom: 0.35rem;
 }
 
-.conference-stage-meta-item {
-  min-height: 2rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: var(--radius-sm);
-  background: rgba(8, 145, 178, 0.08);
-  border: 1px solid rgba(8, 145, 178, 0.14);
-  color: var(--signal-ai-deep);
-}
-
-.conference-feedback-head p {
-  max-width: 46rem;
+.vc-warning p {
+  margin: 0;
+  flex: 1;
+  font-size: 0.72rem;
   color: var(--text-muted);
+  line-height: 1.45;
 }
 
-.conference-state-card {
-  padding: 2rem;
-  max-width: 46rem;
-}
-
-.conference-state-card-light {
-  background:
-    radial-gradient(circle at top right, rgba(94, 231, 255, 0.12), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 255, 0.95));
+.vc-warning-btn {
+  flex-shrink: 0;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.3rem;
   border: 1px solid var(--line);
-  box-shadow: var(--shadow-elevated);
+  background: white;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  cursor: pointer;
 }
 
-.conference-state-actions {
-  display: flex;
-  gap: 0.8rem;
-  margin-top: 1.3rem;
-  flex-wrap: wrap;
-}
+/* ── Tiles ── */
 
-.conference-loading-bar {
-  margin-top: 1.4rem;
-  height: 0.85rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.conference-loading-bar span {
-  display: block;
-  width: 36%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--signal-positive), var(--signal-ai-bright));
-  animation: conference-loading 1.4s ease-in-out infinite;
-}
-
-.video-chat-container {
-  display: grid;
-  gap: 1rem;
-}
-
-.video-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  min-height: 32rem;
-}
-
-.video-box {
+.vc-tiles {
+  flex: 1;
   position: relative;
-  min-height: 32rem;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background:
-    radial-gradient(circle at top right, rgba(94, 231, 255, 0.12), transparent 32%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(9, 17, 31, 1));
-  box-shadow: var(--shadow-elevated);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  min-height: 0;
 }
 
-.video-box::before {
+.vc-tiles.pip {
+  grid-template-columns: 1fr;
+}
+
+.vc-tile {
+  position: relative;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #0c1220;
+  min-height: 0;
+}
+
+/* Bottom gradient for label readability */
+.vc-tile::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(9, 17, 31, 0.14) 58%, rgba(9, 17, 31, 0.7) 100%);
+  inset: auto 0 0;
+  height: 30%;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.45));
   pointer-events: none;
   z-index: 1;
 }
 
-.video-box.local-video {
-  border-color: rgba(18, 214, 160, 0.34);
-}
-
-.video-box.remote-video {
-  border-color: rgba(94, 231, 255, 0.2);
-}
-
-.video-box video {
+.vc-tile video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  background: transparent;
 }
 
-.video-off {
-  opacity: 0.22;
+.vc-tile video.video-off {
+  opacity: 0;
 }
 
-.waiting-box {
+/* ── PiP tile ── */
+
+.vc-tile-pip {
+  position: absolute !important;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 220px;
+  height: 150px;
+  min-height: unset !important;
+  z-index: 15;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: border-color 200ms ease;
+}
+
+.vc-tile-pip:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.vc-tile-pip::after { display: none; }
+
+.vc-tile-pip .vc-tile-pills { display: none; }
+
+.vc-tile-pip .vc-tile-label {
+  bottom: 0.3rem;
+  left: 0.3rem;
+  padding: 0.12rem 0.3rem;
+  font-size: 0.58rem;
+}
+
+.vc-tile-pip .vc-role { display: none; }
+
+.vc-tile-pip .vc-placeholder strong,
+.vc-tile-pip .vc-placeholder p,
+.vc-tile-pip .vc-pulse { display: none; }
+
+.vc-tile-pip .vc-avatar {
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 0.65rem;
+}
+
+/* ── Floating label – bottom-left of tile ── */
+
+.vc-tile-label {
+  position: absolute;
+  bottom: 0.55rem;
+  left: 0.55rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.vc-dot.live { background: #12d6a0; }
+.vc-dot.waiting { background: #f5a524; }
+.vc-dot.connecting { background: #3b82f6; }
+.vc-dot.you { background: #3b82f6; }
+
+.vc-tile-label strong { font-weight: 600; }
+
+.vc-role {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.62rem;
+}
+
+/* Status pills – top-right of tile */
+.vc-tile-pills {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.2rem;
+}
+
+.vc-pill {
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.vc-pill.alert { color: #ffb3b3; }
+.vc-pill.info { color: #5ee7ff; }
+
+/* ── PiP toggle button – top-left of tile ── */
+
+.vc-pip-btn {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 5;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 0.3rem;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.72rem;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.vc-tile:hover .vc-pip-btn,
+.vc-tile-pip .vc-pip-btn {
+  opacity: 1;
+}
+
+.vc-pip-btn:hover {
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vc-tile-pip .vc-pip-btn {
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  font-size: 0.6rem;
+}
+
+/* ── Placeholder (camera off / waiting) ── */
+
+.vc-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   display: grid;
   place-items: center;
-}
-
-.waiting-message {
-  width: min(100%, 26rem);
-  padding: 1.4rem;
+  align-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
   text-align: center;
-  color: rgba(226, 232, 240, 0.92);
-  position: relative;
-  z-index: 2;
 }
 
-.waiting-pulse {
-  width: 4.4rem;
-  height: 4.4rem;
-  margin: 0 auto 1rem;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(18, 214, 160, 0.94) 0%, rgba(18, 214, 160, 0.2) 48%, transparent 72%);
-  animation: conference-pulse 1.6s ease-in-out infinite;
+.vc-avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
-.waiting-message h3 {
-  margin: 0 0 0.55rem;
-  font-size: 1.45rem;
-  letter-spacing: -0.04em;
+.vc-placeholder strong {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9rem;
 }
 
-.waiting-message p {
+.vc-placeholder p {
   margin: 0;
-  color: rgba(148, 163, 184, 0.9);
+  max-width: 14rem;
+  color: rgba(148, 163, 184, 0.55);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.vc-pulse {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(18, 214, 160, 0.65) 0%, transparent 70%);
+  animation: vc-pulse-anim 1.6s ease-in-out infinite;
+}
+
+/* ── Control Dock – floating bottom center ── */
+
+.vc-dock {
+  position: absolute;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem;
+  border-radius: 0.75rem;
+  background: rgba(12, 18, 32, 0.82);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(148, 163, 184, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.vc-ctrl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.45rem 0.65rem;
+  min-width: 3.4rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(148, 163, 184, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(248, 250, 252, 0.8);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.vc-ctrl:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.vc-ctrl.off {
+  background: rgba(242, 85, 85, 0.1);
+  border-color: rgba(242, 85, 85, 0.12);
+  color: #ffcbcb;
+}
+
+.vc-ctrl.on {
+  background: rgba(8, 145, 178, 0.1);
+  border-color: rgba(94, 231, 255, 0.12);
+  color: #5ee7ff;
+}
+
+.vc-ctrl-secondary {
+  background: rgba(148, 163, 184, 0.04);
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.vc-ctrl-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.vc-ctrl-text {
+  font-size: 0.48rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Dock divider */
+.vc-dock-sep {
+  width: 1px;
+  height: 1.4rem;
+  background: rgba(148, 163, 184, 0.12);
+  margin: 0 0.1rem;
+  flex-shrink: 0;
+}
+
+/* Leave button */
+.vc-leave {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.9rem;
+  margin-left: 0.15rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(242, 85, 85, 0.15);
+  background: rgba(242, 85, 85, 0.1);
+  color: #ffe2e2;
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.vc-leave:hover {
+  background: rgba(242, 85, 85, 0.2);
+}
+
+/* Status line – floating above dock */
+.vc-status-line {
+  position: absolute;
+  bottom: 4.8rem;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  text-align: center;
+  font-size: 0.62rem;
+  color: rgba(148, 163, 184, 0.45);
+  margin: 0;
+  pointer-events: none;
+}
+
+/* Fatal error */
+.vc-fatal {
+  padding: 1.15rem;
+  border-radius: 0.65rem;
+  background: rgba(242, 85, 85, 0.05);
+  border: 1px solid rgba(242, 85, 85, 0.1);
+}
+
+.vc-fatal .signal-chip { margin-bottom: 0.5rem; }
+
+.vc-fatal p {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
   line-height: 1.6;
 }
 
-.name-tag,
-.participant-state {
-  position: absolute;
-  left: 1rem;
-  z-index: 2;
-}
-
-.name-tag {
-  bottom: 1rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  min-height: 2rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(9, 17, 31, 0.76);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  color: #f8fafc;
-  font-weight: 600;
-}
-
-.participant-state {
-  top: 1rem;
-  display: inline-flex;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.participant-pill {
-  min-height: 1.7rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(9, 17, 31, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  color: rgba(248, 250, 252, 0.88);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.participant-pill.alert {
-  background: rgba(242, 85, 85, 0.18);
-  color: #ffb7b7;
-}
-
-.participant-pill.ai {
-  background: rgba(8, 145, 178, 0.18);
-  color: var(--signal-ai-bright);
-}
-
-.controls {
+.vc-fatal-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  padding: 1rem;
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top, rgba(94, 231, 255, 0.08), transparent 32%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(9, 17, 31, 1));
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: var(--shadow-elevated);
+  gap: 0.5rem;
 }
 
-.control-btn,
-.call-btn,
-.end-call-btn,
-.incoming-call-btn {
-  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+/* ── Animations ── */
+
+@keyframes vc-spin {
+  to { transform: rotate(360deg); }
 }
 
-.control-btn {
-  width: 3.7rem;
-  height: 3.7rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  color: #eff6ff;
-  font-size: 1.2rem;
+@keyframes vc-pulse-anim {
+  0%, 100% { transform: scale(0.9); opacity: 0.65; }
+  50% { transform: scale(1.08); opacity: 1; }
 }
 
-.control-btn:hover,
-.call-btn:hover,
-.end-call-btn:hover,
-.incoming-call-btn:hover {
-  transform: translateY(-1px);
+@keyframes vc-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-0.5rem); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-.control-btn:hover {
-  background: rgba(59, 130, 246, 0.16);
-  border-color: rgba(94, 231, 255, 0.16);
-}
+/* ── Responsive ── */
 
-.control-btn.active {
-  background: rgba(8, 145, 178, 0.18);
-  border-color: rgba(94, 231, 255, 0.2);
-}
-
-.call-btn,
-.end-call-btn,
-.incoming-call-btn {
-  min-height: 3.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  padding: 0.9rem 1.35rem;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
-}
-
-.call-btn {
-  background: var(--signal-positive);
-  color: var(--ink-950);
-  box-shadow: 0 16px 30px rgba(18, 214, 160, 0.22);
-}
-
-.end-call-btn {
-  background: rgba(242, 85, 85, 0.16);
-  border-color: rgba(242, 85, 85, 0.24);
-  color: #ffe2e2;
-}
-
-.incoming-call {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1.2rem;
-  background: rgba(9, 17, 31, 0.56);
-  backdrop-filter: blur(12px);
-  z-index: 1000;
-}
-
-.incoming-call-card {
-  width: min(100%, 28rem);
-  padding: 1.6rem;
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top right, rgba(94, 231, 255, 0.16), transparent 30%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(9, 17, 31, 1));
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: var(--shadow-overlay);
-  color: rgba(248, 250, 252, 0.94);
-  text-align: center;
-}
-
-.incoming-call-card h3 {
-  margin: 0.95rem 0 0.45rem;
-  font-size: 1.7rem;
-  letter-spacing: -0.05em;
-}
-
-.incoming-call-card p {
-  margin: 0;
-  color: rgba(148, 163, 184, 0.9);
-  line-height: 1.65;
-}
-
-.incoming-call-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1.3rem;
-  flex-wrap: wrap;
-}
-
-.incoming-call-btn.answer {
-  background: var(--signal-positive);
-  color: var(--ink-950);
-}
-
-.incoming-call-btn.decline {
-  background: rgba(242, 85, 85, 0.16);
-  border-color: rgba(242, 85, 85, 0.24);
-  color: #ffe2e2;
-}
-
-.video-chat-error {
-  padding: 1.4rem;
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top right, rgba(242, 85, 85, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96));
-  border: 1px solid rgba(242, 85, 85, 0.18);
-  box-shadow: var(--shadow-resting);
-}
-
-.video-chat-error p {
-  margin: 0.8rem 0 0;
-  color: var(--text-muted);
-  line-height: 1.7;
-}
-
-.video-chat-error-actions {
-  display: flex;
-  gap: 0.8rem;
-  margin-top: 1.2rem;
-  flex-wrap: wrap;
-}
-
-@keyframes conference-loading {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  50% {
-    transform: translateX(140%);
-  }
-}
-
-@keyframes conference-pulse {
-  0%,
-  100% {
-    transform: scale(0.92);
-    opacity: 0.9;
-  }
-
-  50% {
-    transform: scale(1.06);
-    opacity: 1;
-  }
-}
-
-@media (max-width: 1080px) {
-  .conference-hero-grid,
-  .conference-highlight-grid,
-  .video-grid {
+@media (max-width: 900px) {
+  .vc-tiles {
     grid-template-columns: 1fr;
   }
 
-  .video-grid,
-  .video-box {
-    min-height: 24rem;
+  .vc-tile-pip {
+    width: 160px;
+    height: 110px;
+  }
+
+  .vc-dock {
+    flex-wrap: wrap;
+    max-width: 95vw;
+    justify-content: center;
   }
 }
 
-@media (max-width: 640px) {
-  .conference-overview,
-  .conference-brief,
-  .conference-video-stage,
-  .conference-feedback-shell,
-  .conference-state-card {
-    padding: 1.25rem;
+@media (max-width: 600px) {
+  .vc-header {
+    flex-wrap: wrap;
   }
 
-  .conference-overview h1,
-  .conference-state-card h1 {
-    font-size: clamp(1.85rem, 11vw, 2.6rem);
+  .vc-header-meta {
+    flex-wrap: wrap;
   }
 
-  .controls {
-    justify-content: stretch;
+  .vc-tile-pip {
+    width: 130px;
+    height: 90px;
   }
 
-  .control-btn,
-  .call-btn,
-  .end-call-btn,
-  .incoming-call-btn {
-    width: 100%;
+  .vc-ctrl {
+    min-width: 2.8rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .vc-top-bar {
+    top: 0.35rem;
+    right: 0.35rem;
+    gap: 0.25rem;
+  }
+
+  .vc-top-complete,
+  .vc-top-feedback {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.6rem;
   }
 }

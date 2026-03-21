@@ -19,6 +19,11 @@ const {
   transitionApplication
 } = require('../utils/applicationStages');
 
+const hasPopulatedJob = (application) => Boolean(application?.job?._id || application?.job);
+
+const filterApplicationsWithExistingJobs = (applications = []) =>
+  applications.filter(hasPopulatedJob);
+
 const assertRecruiterOwnsJob = async (jobId, recruiterId) => {
   const job = await Job.findById(jobId);
 
@@ -363,11 +368,13 @@ const getCandidateApplications = asyncHandler(async (req, res) => {
         }
       })
       .sort({ createdAt: -1 });
+
+    const visibleApplications = filterApplicationsWithExistingJobs(applications);
     
     res.status(200).json({
       success: true,
-      count: applications.length,
-      data: applications.map(serializeApplication)
+      count: visibleApplications.length,
+      data: visibleApplications.map(serializeApplication)
     });
   } catch (error) {
     console.error('Error getting candidate applications:', error);

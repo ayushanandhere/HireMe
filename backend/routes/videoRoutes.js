@@ -11,7 +11,8 @@ const videoService = require('../services/videoService');
 router.get('/:interviewId/details', protect, async (req, res) => {
   try {
     const { interviewId } = req.params;
-    const meetingDetails = await videoService.getMeetingDetails(interviewId);
+    const baseUrl = req.query.baseUrl || process.env.FRONTEND_URL || '';
+    const meetingDetails = await videoService.getMeetingDetails(interviewId, req.user, baseUrl);
     
     res.json({
       success: true,
@@ -19,7 +20,7 @@ router.get('/:interviewId/details', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting meeting details:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Error getting meeting details'
     });
@@ -34,8 +35,8 @@ router.get('/:interviewId/details', protect, async (req, res) => {
 router.get('/:interviewId/url', protect, async (req, res) => {
   try {
     const { interviewId } = req.params;
-    const baseUrl = req.query.baseUrl || '';
-    const meetingUrl = await videoService.getMeetingUrl(interviewId, baseUrl);
+    const baseUrl = req.query.baseUrl || process.env.FRONTEND_URL || '';
+    const meetingUrl = await videoService.getMeetingUrl(interviewId, req.user, baseUrl);
     
     res.json({
       success: true,
@@ -43,7 +44,7 @@ router.get('/:interviewId/url', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting meeting URL:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || 'Error getting meeting URL'
     });

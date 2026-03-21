@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  FaArrowRight,
   FaPaperPlane,
   FaRobot,
   FaStar,
@@ -84,14 +83,10 @@ const InterviewInboxPage = () => {
   }, [notifications]);
 
   const formatDateTime = (dateTimeStr) =>
-    new Date(dateTimeStr).toLocaleString('en-US', {
-      weekday: 'short',
+    new Date(dateTimeStr).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
+      day: 'numeric'
     });
 
   const handleStatusUpdate = async (interviewId, newStatus) => {
@@ -110,185 +105,181 @@ const InterviewInboxPage = () => {
   };
 
   if (loading) {
-    return <div className="interview-hub-loading">Loading interviews...</div>;
+    return <div className="iv-loading"><div className="iv-spinner" /><p>Loading...</p></div>;
   }
 
   return (
-    <div className="interview-hub page-shell">
-      <section className="interview-hub-hero">
-        <article className="interview-hub-hero-copy instrument-card">
-          <span className="eyebrow eyebrow-dark">Interview operations</span>
-          <h1>Keep scheduled conversations from slipping.</h1>
-          <p>
-            Pending confirmations, live interview prep, and post-interview follow-up all route
-            through this hub.
-          </p>
-          <div className="interview-hub-hero-actions">
-            <Link to="/dashboard/recruiter" className="action-link signal">
-              Return to overview
-            </Link>
-            <Link to="/dashboard/recruiter/jobs" className="action-link ghost">
-              Manage roles
-            </Link>
+    <div className="iv-page page-shell">
+      <section className="iv-header">
+        <div className="iv-header-left">
+          <h1>Interviews</h1>
+          <div className="iv-header-meta">
+            <span className="signal-chip review">{interviews.pending.length} pending</span>
+            <span className="signal-chip active">{interviews.upcoming.length} upcoming</span>
+            <span className="signal-chip ai">{interviews.past.length} past</span>
           </div>
-        </article>
-
-        <article className="interview-hub-hero-panel surface-card">
-          <div className="interview-hub-stat-grid">
-            <div>
-              <span className="interview-hub-stat-label">Pending</span>
-              <strong>{interviews.pending.length}</strong>
-            </div>
-            <div>
-              <span className="interview-hub-stat-label">Upcoming</span>
-              <strong>{interviews.upcoming.length}</strong>
-            </div>
-            <div>
-              <span className="interview-hub-stat-label">Past</span>
-              <strong>{interviews.past.length}</strong>
-            </div>
-          </div>
-        </article>
+        </div>
+        <div className="iv-header-actions">
+          <Link to="/dashboard/recruiter" className="action-link ghost">
+            Dashboard
+          </Link>
+          <Link to="/dashboard/recruiter/jobs" className="action-link primary">
+            Manage roles
+          </Link>
+        </div>
       </section>
 
-      {error && <div className="interview-hub-error">{error}</div>}
-      {successMessage && <div className="interview-hub-success">{successMessage}</div>}
+      {error && <div className="iv-alert iv-alert-error">{error}</div>}
+      {successMessage && <div className="iv-alert iv-alert-success">{successMessage}</div>}
 
-      <section className="interview-hub-section surface-card">
-        <div className="interview-hub-head">
-          <div>
-            <span className="eyebrow">Pending interviews</span>
-            <h2>Requests waiting on recruiter action</h2>
+      <div className="iv-board">
+        <section className="iv-section surface-card">
+          <div className="iv-section-head">
+            <div>
+              <span className="iv-section-label">Pending</span>
+              <h2>Waiting on a decision</h2>
+            </div>
+            <span className="signal-chip review">{interviews.pending.length} open</span>
           </div>
-          <span className="signal-chip review">{interviews.pending.length} pending</span>
-        </div>
-        {interviews.pending.length === 0 ? (
-          <p className="interview-hub-empty">No pending interview requests.</p>
-        ) : (
-          <div className="interview-hub-list">
-            {interviews.pending.map((interview) => (
-              <article key={interview._id} className="interview-hub-card surface-card">
-                <div className="interview-hub-card-head">
-                  <div>
-                    <h3>{interview.candidate?.name}</h3>
-                    <span>{interview.position?.title}</span>
+          {interviews.pending.length === 0 ? (
+            <p className="iv-empty">No pending interview requests.</p>
+          ) : (
+            <div className="iv-list">
+              {interviews.pending.map((interview) => (
+                <article key={interview._id} className="iv-card surface-card">
+                  <div className="iv-card-top">
+                    <span className="signal-chip review">Pending</span>
+                    <span className="iv-card-date mono">{formatDateTime(interview.scheduledDateTime)}</span>
                   </div>
-                  <span className="signal-chip review">Pending</span>
-                </div>
-                <div className="interview-hub-meta">
-                  <span>{formatDateTime(interview.scheduledDateTime)}</span>
-                  <span>{interview.duration} mins</span>
-                </div>
-                <div className="interview-hub-actions">
-                  <button
-                    type="button"
-                    className="action-link ghost"
-                    onClick={() => handleStatusUpdate(interview._id, 'cancelled')}
-                  >
-                    <FaTimes /> Cancel
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="interview-hub-section surface-card">
-        <div className="interview-hub-head">
-          <div>
-            <span className="eyebrow">Upcoming interviews</span>
-            <h2>Brief, meet, and keep the loop tight</h2>
-          </div>
-          <span className="signal-chip active">{interviews.upcoming.length} live</span>
-        </div>
-        {interviews.upcoming.length === 0 ? (
-          <p className="interview-hub-empty">No upcoming interviews scheduled.</p>
-        ) : (
-          <div className="interview-hub-list">
-            {interviews.upcoming.map((interview) => (
-              <article key={interview._id} className="interview-hub-card surface-card">
-                <div className="interview-hub-card-head">
-                  <div>
-                    <h3>{interview.candidate?.name}</h3>
-                    <span>{interview.position?.title}</span>
+                  <div className="iv-card-head">
+                    <div>
+                      <h3>{interview.candidate?.name}</h3>
+                      <span>{interview.position?.title}</span>
+                    </div>
                   </div>
-                  <span className={`signal-chip ${getStatusTone(interview.status)}`}>Accepted</span>
-                </div>
-                <div className="interview-hub-meta">
-                  <span>{formatDateTime(interview.scheduledDateTime)}</span>
-                  <span>{interview.duration} mins</span>
-                </div>
-                <div className="interview-hub-actions">
-                  <Link to={`/interview/${interview._id}/briefing`} className="action-link secondary">
-                    <FaRobot /> Briefing room
-                  </Link>
-                  <Link to={`/interview/${interview._id}/meeting`} className="action-link primary">
-                    <FaVideo /> Join call
-                  </Link>
-                  <button
-                    type="button"
-                    className="action-link ghost"
-                    onClick={() => handleStatusUpdate(interview._id, 'cancelled')}
-                  >
-                    <FaTimes /> Cancel
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="interview-hub-section surface-card">
-        <div className="interview-hub-head">
-          <div>
-            <span className="eyebrow">Past interviews</span>
-            <h2>Feedback and completion state</h2>
-          </div>
-          <span className="signal-chip ai">{interviews.past.length} recorded</span>
-        </div>
-        {interviews.past.length === 0 ? (
-          <p className="interview-hub-empty">No past interviews found.</p>
-        ) : (
-          <div className="interview-hub-list">
-            {interviews.past.map((interview) => (
-              <article key={interview._id} className="interview-hub-card surface-card">
-                <div className="interview-hub-card-head">
-                  <div>
-                    <h3>{interview.candidate?.name}</h3>
-                    <span>{interview.position?.title}</span>
+                  <div className="iv-card-meta">
+                    <span>{interview.duration} min</span>
                   </div>
-                  <span className={`signal-chip ${getStatusTone(interview.status)}`}>{interview.status}</span>
-                </div>
-                <div className="interview-hub-meta">
-                  <span>{formatDateTime(interview.scheduledDateTime)}</span>
-                  {interview.feedback ? (
-                    <span>
-                      <FaStar /> {interview.feedback.overallScore}/10
-                    </span>
-                  ) : (
-                    <span>No rating yet</span>
-                  )}
-                </div>
-                <div className="interview-hub-actions">
-                  {interview.status === 'completed' && !interview.feedback ? (
+                  <div className="iv-card-note review">Still waiting on recruiter action before this moves forward.</div>
+                  <div className="iv-card-actions">
                     <button
                       type="button"
-                      className="action-link secondary"
-                      onClick={() => navigate(`/dashboard/recruiter/interviews/${interview._id}/feedback`)}
+                      className="action-link ghost"
+                      onClick={() => handleStatusUpdate(interview._id, 'cancelled')}
                     >
-                      <FaPaperPlane /> Add feedback
+                      <FaTimes /> Cancel
                     </button>
-                  ) : (
-                    <span className="interview-hub-note">No further action required</span>
-                  )}
-                </div>
-              </article>
-            ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="iv-section surface-card">
+          <div className="iv-section-head">
+            <div>
+              <span className="iv-section-label">Upcoming</span>
+              <h2>Scheduled</h2>
+            </div>
+            <span className="signal-chip active">{interviews.upcoming.length} scheduled</span>
           </div>
-        )}
-      </section>
+          {interviews.upcoming.length === 0 ? (
+            <p className="iv-empty">No upcoming interviews scheduled.</p>
+          ) : (
+            <div className="iv-list">
+              {interviews.upcoming.map((interview) => (
+                <article key={interview._id} className="iv-card surface-card">
+                  <div className="iv-card-top">
+                    <span className="signal-chip active">Scheduled</span>
+                    <span className="iv-card-date mono">{formatDateTime(interview.scheduledDateTime)}</span>
+                  </div>
+                  <div className="iv-card-head">
+                    <div>
+                      <h3>{interview.candidate?.name}</h3>
+                      <span>{interview.position?.title}</span>
+                    </div>
+                  </div>
+                  <div className="iv-card-meta">
+                    <span>{interview.duration} min</span>
+                  </div>
+                  <div className="iv-card-note active">Everything is confirmed. Brief, join, or cancel from here.</div>
+                  <div className="iv-card-actions">
+                    <Link to={`/interview/${interview._id}/briefing`} className="action-link ghost">
+                      <FaRobot /> Briefing
+                    </Link>
+                    <Link to={`/interview/${interview._id}/meeting`} className="action-link primary">
+                      <FaVideo /> Join call
+                    </Link>
+                    <button
+                      type="button"
+                      className="action-link ghost"
+                      onClick={() => handleStatusUpdate(interview._id, 'cancelled')}
+                    >
+                      <FaTimes /> Cancel
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="iv-section surface-card">
+          <div className="iv-section-head">
+            <div>
+              <span className="iv-section-label">Past</span>
+              <h2>Completed</h2>
+            </div>
+            <span className="signal-chip ai">{interviews.past.length} recorded</span>
+          </div>
+          {interviews.past.length === 0 ? (
+            <p className="iv-empty">No past interviews found.</p>
+          ) : (
+            <div className="iv-list">
+              {interviews.past.map((interview) => (
+                <article key={interview._id} className="iv-card surface-card">
+                  <div className="iv-card-top">
+                    <span className={`signal-chip ${getStatusTone(interview.status)}`}>{interview.status}</span>
+                    <span className="iv-card-date mono">{formatDateTime(interview.scheduledDateTime)}</span>
+                  </div>
+                  <div className="iv-card-head">
+                    <div>
+                      <h3>{interview.candidate?.name}</h3>
+                      <span>{interview.position?.title}</span>
+                    </div>
+                  </div>
+                  <div className="iv-card-meta">
+                    {interview.feedback ? (
+                      <span><FaStar /> {interview.feedback.overallScore}/10</span>
+                    ) : (
+                      <span>No rating</span>
+                    )}
+                  </div>
+                  <div className="iv-card-note neutral">
+                    {interview.status === 'completed' && !interview.feedback
+                      ? 'Feedback still needs to be submitted.'
+                      : 'This interview is closed.'}
+                  </div>
+                  <div className="iv-card-actions">
+                    {interview.status === 'completed' && !interview.feedback ? (
+                      <button
+                        type="button"
+                        className="action-link ghost"
+                        onClick={() => navigate(`/dashboard/recruiter/interviews/${interview._id}/feedback`)}
+                      >
+                        <FaPaperPlane /> Add feedback
+                      </button>
+                    ) : (
+                      <span className="iv-note">No further action</span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };

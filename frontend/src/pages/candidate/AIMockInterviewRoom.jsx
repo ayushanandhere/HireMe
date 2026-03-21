@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Spinner, Alert, Badge, ProgressBar, Tabs, Tab, Modal, Accordion } from 'react-bootstrap';
+/* react-bootstrap removed — using native elements */
 import { FaArrowLeft, FaMicrophone, FaMicrophoneSlash, FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaRobot, FaUser, FaFileAlt, FaChartLine, FaCheckCircle, FaTimesCircle, FaBriefcase, FaWifi, FaExclamationTriangle, FaStar, FaCheck, FaExclamation, FaLightbulb } from 'react-icons/fa';
 import { applicationService, buildAssetUrl, mockInterviewService } from '../../services/api';
 import './AIMockInterviewRoom.css';
@@ -572,12 +572,13 @@ const AIMockInterviewRoom = () => {
   // Render loading state
   if (loading) {
     return (
-      <Container className="py-4">
-        <div className="text-center my-5">
-          <Spinner animation="border" variant="primary" />
-          <p className="mt-3">Loading your AI mock interview room...</p>
+      <div className="mock-interview-page page-shell">
+        <div className="container mock-loading-state">
+          <div className="mock-loading-orb" />
+          <h2>Preparing your mock interview</h2>
+          <p>Loading the role, interview configuration, and practice environment.</p>
         </div>
-      </Container>
+      </div>
     );
   }
   
@@ -609,307 +610,266 @@ const AIMockInterviewRoom = () => {
   };
   
   // Error Modal Component
-  const ErrorModal = () => (
-    <Modal show={showErrorModal} onHide={() => setShowErrorModal(false)} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>Error</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="error-icon">
-          {errorType === 'microphone' && <FaMicrophone size={40} />}
-          {errorType === 'network' && <FaWifi size={40} />}
-          {errorType === 'server' && <FaExclamationTriangle size={40} />}
+  const ErrorModal = () => {
+    if (!showErrorModal) return null;
+    return (
+      <div className="mock-overlay" onClick={() => setShowErrorModal(false)}>
+        <div className="mock-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="mock-modal-icon error">
+            {errorType === 'microphone' && <FaMicrophone />}
+            {errorType === 'network' && <FaWifi />}
+            {errorType === 'server' && <FaExclamationTriangle />}
+            {!errorType && <FaExclamationTriangle />}
+          </div>
+          <h3 className="mock-modal-title">Something went wrong</h3>
+          <p className="mock-modal-body">{error}</p>
+          <p className="mock-modal-hint">
+            {errorType === 'microphone' && 'Ensure your browser has microphone permission and no other app is using it.'}
+            {errorType === 'network' && 'Check your internet connection and try again.'}
+            {errorType === 'server' && 'There was a server issue. Please try again in a moment.'}
+          </p>
+          <div className="mock-modal-actions">
+            <button type="button" className="mock-modal-btn secondary" onClick={() => setShowErrorModal(false)}>
+              Close
+            </button>
+            <button type="button" className="mock-modal-btn primary" onClick={handleErrorRetry}>
+              Try Again
+            </button>
+          </div>
         </div>
-        <p className="error-message">{error}</p>
-        <div className="error-help-text">
-          {errorType === 'microphone' && (
-            <p>Please ensure your browser has permission to use your microphone and that no other application is currently using it.</p>
-          )}
-          {errorType === 'network' && (
-            <p>Please check your internet connection and try again.</p>
-          )}
-          {errorType === 'server' && (
-            <p>There was an issue with the server. Please try again in a moment.</p>
-          )}
-        </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowErrorModal(false)}>
-          Close
-        </Button>
-        <Button variant="primary" onClick={handleErrorRetry}>
-          Try Again
-        </Button>
-        <Button 
-          variant="outline-danger" 
-          onClick={() => navigate('/dashboard/candidate/applications')}
-        >
-          Return to Applications
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  );
+      </div>
+    );
+  };
   
   // Interview Type Selection Modal
-  const InterviewTypeModal = () => (
-    <Modal 
-      show={showInterviewTypeModal} 
-      onHide={() => setShowInterviewTypeModal(false)} 
-      centered
-      className="interview-type-modal"
-      size="lg"
-    >
-      <Modal.Header closeButton>
-        <Modal.Title>Select Interview Type</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="interview-type-options">
-          <div 
-            className={`interview-type-card ${interviewMode === 'technical' ? 'selected' : ''}`}
-            onClick={() => setInterviewMode('technical')}
-          >
-            <div className="interview-type-icon">💻</div>
-            <h3>Technical Interview</h3>
-            <p>{interviewModeDescription.technical}</p>
-            <div className="interview-type-examples">
-              <h4>Example Questions:</h4>
-              <ul>
-                <li>Explain how you would implement a specific algorithm.</li>
-                <li>How would you optimize this database query?</li>
-                <li>Describe your experience with cloud technologies.</li>
-              </ul>
-            </div>
-            {interviewMode === 'technical' && (
-              <div className="selected-badge">Selected</div>
-            )}
+  const InterviewTypeModal = () => {
+    if (!showInterviewTypeModal) return null;
+    return (
+      <div className="mock-overlay" onClick={() => setShowInterviewTypeModal(false)}>
+        <div className="mock-modal mock-modal--wide" onClick={(e) => e.stopPropagation()}>
+          <h3 className="mock-modal-title">Select Interview Type</h3>
+          <div className="interview-type-options">
+            <button
+              type="button"
+              className={`interview-type-card ${interviewMode === 'technical' ? 'selected' : ''}`}
+              onClick={() => setInterviewMode('technical')}
+            >
+              <span className="itc-icon">💻</span>
+              <strong>Technical</strong>
+              <span className="itc-desc">{interviewModeDescription.technical}</span>
+            </button>
+            <button
+              type="button"
+              className={`interview-type-card ${interviewMode === 'behavioral' ? 'selected' : ''}`}
+              onClick={() => setInterviewMode('behavioral')}
+            >
+              <span className="itc-icon">🤝</span>
+              <strong>Behavioral</strong>
+              <span className="itc-desc">{interviewModeDescription.behavioral}</span>
+            </button>
+            <button
+              type="button"
+              className={`interview-type-card ${interviewMode === 'hr' ? 'selected' : ''}`}
+              onClick={() => setInterviewMode('hr')}
+            >
+              <span className="itc-icon">👔</span>
+              <strong>HR</strong>
+              <span className="itc-desc">{interviewModeDescription.hr}</span>
+            </button>
           </div>
-          
-          <div 
-            className={`interview-type-card ${interviewMode === 'behavioral' ? 'selected' : ''}`}
-            onClick={() => setInterviewMode('behavioral')}
-          >
-            <div className="interview-type-icon">🤝</div>
-            <h3>Behavioral Interview</h3>
-            <p>{interviewModeDescription.behavioral}</p>
-            <div className="interview-type-examples">
-              <h4>Example Questions:</h4>
-              <ul>
-                <li>Tell me about a time you faced a difficult challenge.</li>
-                <li>How do you handle conflicts in a team?</li>
-                <li>Describe a situation where you showed leadership.</li>
-              </ul>
-            </div>
-            {interviewMode === 'behavioral' && (
-              <div className="selected-badge">Selected</div>
-            )}
-          </div>
-          
-          <div 
-            className={`interview-type-card ${interviewMode === 'hr' ? 'selected' : ''}`}
-            onClick={() => setInterviewMode('hr')}
-          >
-            <div className="interview-type-icon">👔</div>
-            <h3>HR Interview</h3>
-            <p>{interviewModeDescription.hr}</p>
-            <div className="interview-type-examples">
-              <h4>Example Questions:</h4>
-              <ul>
-                <li>Why do you want to work for our company?</li>
-                <li>What are your salary expectations?</li>
-                <li>Where do you see yourself in 5 years?</li>
-              </ul>
-            </div>
-            {interviewMode === 'hr' && (
-              <div className="selected-badge">Selected</div>
-            )}
+          <div className="mock-modal-actions">
+            <button type="button" className="mock-modal-btn secondary" onClick={() => setShowInterviewTypeModal(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="mock-modal-btn primary"
+              onClick={() => {
+                setShowInterviewTypeModal(false);
+                if (interviewStage === 'intro') {
+                  setQuestions([]);
+                }
+              }}
+            >
+              Confirm
+            </button>
           </div>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowInterviewTypeModal(false)}>
-          Cancel
-        </Button>
-        <Button 
-          variant="primary" 
-          onClick={() => {
-            setShowInterviewTypeModal(false);
-            // Reset questions if interview hasn't started yet
-            if (interviewStage === 'intro') {
-              setQuestions([]);
-            }
-          }}
-        >
-          Confirm Selection
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  );
+      </div>
+    );
+  };
   
   // Display error modal instead of replacing the entire UI
   // This allows for more graceful error recovery
   
   return (
-    <div className="mock-interview-room">
+    <div className="mock-interview-page page-shell">
       {/* Error Modal */}
       <ErrorModal />
       
       {/* Interview Type Selection Modal */}
       <InterviewTypeModal />
-      
-      {/* Header */}
-      <div className="interview-header">
-        <div className="back-button">
-          <Link to="/dashboard/candidate/applications" className="btn-back">
-            <FaArrowLeft /> Back to Applications
-          </Link>
-        </div>
-        <div className="interview-title">
-          <h1>AI Mock Interview</h1>
-          <div className="job-details">
-            <span className="job-title">{application?.job?.title}</span>
-            <span className="company-badge">{application?.job?.company}</span>
+      <div className="container mock-shell">
+        <header className="mock-page-header">
+          <div className="mock-page-header-left">
+            <h1>Mock Interview</h1>
+            <div className="mock-page-header-meta">
+              <span className="signal-chip positive">{interviewMode.charAt(0).toUpperCase() + interviewMode.slice(1)}</span>
+              {application?.job?.type && <span className="signal-chip ai">{application.job.type}</span>}
+              <span className="signal-chip active">{selectedQuestionCount} questions</span>
+            </div>
+            <p className="mock-page-header-note">
+              {application?.job?.title || 'Role'}{application?.job?.company ? ` at ${application.job.company}` : ''}.
+            </p>
           </div>
-        </div>
-        <div className="interview-type-display">
-          <div className="interview-type-icon">
-            {interviewMode === 'technical' && '💻'}
-            {interviewMode === 'behavioral' && '🤝'}
-            {interviewMode === 'hr' && '👔'}
+
+          <div className="mock-page-header-actions">
+            <Link to={`/application/${applicationId}/training`} className="action-link ghost">
+              Training
+            </Link>
+            <Link to="/dashboard/candidate/applications" className="action-link secondary">
+              <FaArrowLeft /> Applications
+            </Link>
           </div>
-          <div className="interview-type-info">
-            <span className="interview-type-label">{interviewMode.charAt(0).toUpperCase() + interviewMode.slice(1)} Interview</span>
-          </div>
-        </div>
-      </div>
+        </header>
       
       {/* Main Content */}
-      <div className="interview-content">
+      <div className="mock-content">
         {interviewStage === 'intro' && (
           <div className="interview-intro">
-            <div className="intro-card">
-              <div className="intro-icon">
-                <FaRobot size={48} />
-              </div>
-              <h2>Welcome to Your AI Mock Interview</h2>
-              <p>
-                This interview will simulate a real job interview for the position of <strong>{application?.job?.title}</strong> at <strong>{application?.job?.company}</strong>.
-                The AI interviewer will ask you questions based on the job requirements and your profile.
-              </p>
-              
-              <div className="interview-mode-selection">
-                <h3>Select Interview Type:</h3>
-                <div className="interview-type-options">
-                  <div 
-                    className={`interview-type-card ${interviewMode === 'technical' ? 'selected' : ''}`}
-                    onClick={() => setInterviewMode('technical')}
-                  >
-                    <div className="interview-type-icon">💻</div>
-                    <h3>Technical Interview</h3>
-                    <p>{interviewModeDescription.technical}</p>
-                    <div className="interview-type-examples">
-                      <h4>Example Questions:</h4>
-                      <ul>
-                        <li>Explain how you would implement a specific algorithm.</li>
-                        <li>How would you optimize this database query?</li>
-                        <li>Describe your experience with cloud technologies.</li>
-                      </ul>
-                    </div>
-                    {interviewMode === 'technical' && (
-                      <div className="selected-badge">Selected</div>
-                    )}
+            <div className="mock-setup-grid">
+              <aside className="mock-setup-rail surface-card">
+                <div className="mock-role-summary">
+                  <div className="mock-role-icon">
+                    <FaRobot />
                   </div>
-                  
-                  <div 
-                    className={`interview-type-card ${interviewMode === 'behavioral' ? 'selected' : ''}`}
-                    onClick={() => setInterviewMode('behavioral')}
-                  >
-                    <div className="interview-type-icon">🤝</div>
-                    <h3>Behavioral Interview</h3>
-                    <p>{interviewModeDescription.behavioral}</p>
-                    <div className="interview-type-examples">
-                      <h4>Example Questions:</h4>
-                      <ul>
-                        <li>Tell me about a time you faced a difficult challenge.</li>
-                        <li>How do you handle conflicts in a team?</li>
-                        <li>Describe a situation where you showed leadership.</li>
-                      </ul>
-                    </div>
-                    {interviewMode === 'behavioral' && (
-                      <div className="selected-badge">Selected</div>
-                    )}
-                  </div>
-                  
-                  <div 
-                    className={`interview-type-card ${interviewMode === 'hr' ? 'selected' : ''}`}
-                    onClick={() => setInterviewMode('hr')}
-                  >
-                    <div className="interview-type-icon">👔</div>
-                    <h3>HR Interview</h3>
-                    <p>{interviewModeDescription.hr}</p>
-                    <div className="interview-type-examples">
-                      <h4>Example Questions:</h4>
-                      <ul>
-                        <li>Why do you want to work for our company?</li>
-                        <li>What are your salary expectations?</li>
-                        <li>Where do you see yourself in 5 years?</li>
-                      </ul>
-                    </div>
-                    {interviewMode === 'hr' && (
-                      <div className="selected-badge">Selected</div>
-                    )}
+                  <div>
+                    <h2>{application?.job?.title}</h2>
+                    <p>{application?.job?.company}</p>
                   </div>
                 </div>
-              </div>
+
+                <div className="mock-detail-list">
+                  {application?.job?.company && (
+                    <div>
+                      <span><FaBriefcase /> Company</span>
+                      <strong>{application.job.company}</strong>
+                    </div>
+                  )}
+                  {application?.job?.location && (
+                    <div>
+                      <span><FaChartLine /> Location</span>
+                      <strong>{application.job.location}</strong>
+                    </div>
+                  )}
+                  <div>
+                    <span><FaCheckCircle /> Mode</span>
+                    <strong>{interviewMode.charAt(0).toUpperCase() + interviewMode.slice(1)} interview</strong>
+                  </div>
+                </div>
+
+                <section className="mock-setup-section">
+                  <h3>How it works</h3>
+                  <ol>
+                    <li>The interviewer asks one question at a time.</li>
+                    <li>You answer using your microphone.</li>
+                    <li>Your responses are scored and reviewed at the end.</li>
+                  </ol>
+                </section>
+              </aside>
+
+              <section className="intro-card surface-card">
+                <div className="mock-section-intro">
+                  <span className="mock-section-label">Interview setup</span>
+                  <h2>Choose the kind of practice you want.</h2>
+                  <p>
+                    Run a focused rehearsal for <strong>{application?.job?.title}</strong> and get structured feedback once the session ends.
+                  </p>
+                </div>
               
-              <div className="interview-instructions">
-                <h3>How It Works:</h3>
-                <ol>
-                  <li>The AI interviewer will ask you questions one by one</li>
-                  <li>Speak your answers clearly into your microphone</li>
-                  <li>Your answers will be analyzed in real-time</li>
-                  <li>At the end, you'll receive detailed feedback and a score</li>
-                </ol>
+                <div className="interview-mode-selection">
+                  <h3>Interview type</h3>
+                  <div className="interview-type-options">
+                    <button
+                      type="button"
+                      className={`interview-type-card ${interviewMode === 'technical' ? 'selected' : ''}`}
+                      onClick={() => setInterviewMode('technical')}
+                    >
+                      <span className="itc-icon">💻</span>
+                      <strong>Technical</strong>
+                      <span className="itc-desc">{interviewModeDescription.technical}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`interview-type-card ${interviewMode === 'behavioral' ? 'selected' : ''}`}
+                      onClick={() => setInterviewMode('behavioral')}
+                    >
+                      <span className="itc-icon">🤝</span>
+                      <strong>Behavioral</strong>
+                      <span className="itc-desc">{interviewModeDescription.behavioral}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`interview-type-card ${interviewMode === 'hr' ? 'selected' : ''}`}
+                      onClick={() => setInterviewMode('hr')}
+                    >
+                      <span className="itc-icon">👔</span>
+                      <strong>HR</strong>
+                      <span className="itc-desc">{interviewModeDescription.hr}</span>
+                    </button>
+                  </div>
               </div>
               
               <div className="question-count-selection">
-                <h3>Number of Questions:</h3>
-                <div className="range-selector">
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="20" 
-                    value={selectedQuestionCount} 
-                    onChange={(e) => setSelectedQuestionCount(parseInt(e.target.value))}
-                    className="question-count-slider"
-                  />
-                  <div className="question-count-display">{selectedQuestionCount} questions</div>
+                <div className="mock-section-head">
+                  <h3>Question count</h3>
+                  <span className="mock-count-label">{selectedQuestionCount} question{selectedQuestionCount !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="mock-count-dots">
+                  {[...Array(20)].map((_, i) => {
+                    const n = i + 1;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        className={`mock-count-dot${selectedQuestionCount === n ? ' selected' : ''}${n >= 5 && n <= 10 ? ' recommended' : ''}`}
+                        onClick={() => setSelectedQuestionCount(n)}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="question-count-note">
-                  Select between 1-20 questions for your mock interview. A typical interview has 5-10 questions.
+                  A typical interview has 5–10 questions.
                 </p>
               </div>
               
               <div className="interview-permissions">
-                <Alert variant="info">
+                <div className="mock-permission-card">
                   <FaVolumeUp className="me-2" />
-                  This interview requires microphone access. Please ensure your browser has permission to use your microphone.
-                </Alert>
+                  This session needs microphone access before you begin.
+                </div>
               </div>
               
-              <Button 
-                className="start-interview-btn"
+              <button
+                type="button"
+                className="mock-start-btn"
                 onClick={startInterview}
                 disabled={isProcessing}
               >
                 {isProcessing ? (
                   <>
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Preparing Interview...
+                    <span className="mock-btn-spinner" />
+                    Preparing Interview…
                   </>
                 ) : (
-                  <>Start Interview</>
+                  'Start Interview'
                 )}
-              </Button>
+              </button>
+            </section>
             </div>
           </div>
         )}
@@ -943,11 +903,6 @@ const AIMockInterviewRoom = () => {
                 <div className="interview-window user-window">
                   <div className="window-header">
                     <div className="window-title">You</div>
-                    <div className="window-controls">
-                      <div className="window-control"></div>
-                      <div className="window-control"></div>
-                      <div className="window-control"></div>
-                    </div>
                   </div>
                   <div className="window-content">
                     <div className="user-video-placeholder">
@@ -974,8 +929,8 @@ const AIMockInterviewRoom = () => {
                       <div className="user-status">
                         {isProcessing ? (
                           <>
-                            <Spinner animation="border" size="sm" className="me-2" />
-                            <span>Processing...</span>
+                            <span className="mock-btn-spinner" />
+                            <span>Processing…</span>
                           </>
                         ) : isRecording ? (
                           <>
@@ -996,11 +951,6 @@ const AIMockInterviewRoom = () => {
                     <div className="window-title">
                       <FaRobot className="window-title-icon" />
                       AI Interviewer
-                    </div>
-                    <div className="window-controls">
-                      <div className="window-control"></div>
-                      <div className="window-control"></div>
-                      <div className="window-control"></div>
                     </div>
                   </div>
                   <div className="window-content">
@@ -1070,29 +1020,22 @@ const AIMockInterviewRoom = () => {
               <div className="recording-controls">
                 {interviewCompleted ? (
                   <div className="interview-completed-message">
-                    <Badge bg="success" className="p-2 mb-2">
-                      <FaCheckCircle className="me-2" /> Interview Completed
-                    </Badge>
-                    <p className="text-success">
-                      All required questions have been answered. Generating final feedback...
-                    </p>
+                    <span className="signal-chip positive"><FaCheckCircle /> Interview Completed</span>
+                    <p>All required questions have been answered. Generating final feedback…</p>
                   </div>
                 ) : (
-                  <Button 
+                  <button
+                    type="button"
                     className={`record-btn ${isRecording ? 'recording' : ''}`}
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={isProcessing || isAiSpeaking || interviewCompleted}
                   >
                     {isRecording ? (
-                      <>
-                        <FaMicrophoneSlash className="me-2" /> Stop Recording
-                      </>
+                      <><FaMicrophoneSlash /> Stop Recording</>
                     ) : (
-                      <>
-                        <FaMicrophone className="me-2" /> Start Recording
-                      </>
+                      <><FaMicrophone /> Start Recording</>
                     )}
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
@@ -1126,12 +1069,10 @@ const AIMockInterviewRoom = () => {
                   </div>
                 </div>
                 
-                <Accordion defaultActiveKey="0" className="feedback-accordion">
-                  <Accordion.Item eventKey="0">
-                    <Accordion.Header>
-                      <FaStar className="me-2" /> Strengths
-                    </Accordion.Header>
-                    <Accordion.Body>
+                <div className="mock-fb-sections">
+                  <details className="mock-fb-detail" open>
+                    <summary><FaStar /> Strengths</summary>
+                    <div className="mock-fb-body">
                       {feedback.strengths && feedback.strengths.length > 0 ? (
                         <ul className="strength-list">
                           {feedback.strengths.map((strength, index) => (
@@ -1144,14 +1085,12 @@ const AIMockInterviewRoom = () => {
                       ) : (
                         <p>No specific strengths highlighted</p>
                       )}
-                    </Accordion.Body>
-                  </Accordion.Item>
-                  
-                  <Accordion.Item eventKey="1">
-                    <Accordion.Header>
-                      <FaExclamationTriangle className="me-2" /> Areas for Improvement
-                    </Accordion.Header>
-                    <Accordion.Body>
+                    </div>
+                  </details>
+
+                  <details className="mock-fb-detail">
+                    <summary><FaExclamationTriangle /> Areas for Improvement</summary>
+                    <div className="mock-fb-body">
                       {feedback.areasForImprovement && feedback.areasForImprovement.length > 0 ? (
                         <ul className="improvement-list">
                           {feedback.areasForImprovement.map((area, index) => (
@@ -1164,14 +1103,12 @@ const AIMockInterviewRoom = () => {
                       ) : (
                         <p>No specific areas for improvement highlighted</p>
                       )}
-                    </Accordion.Body>
-                  </Accordion.Item>
-                  
-                  <Accordion.Item eventKey="2">
-                    <Accordion.Header>
-                      <FaLightbulb className="me-2" /> Recommendations
-                    </Accordion.Header>
-                    <Accordion.Body>
+                    </div>
+                  </details>
+
+                  <details className="mock-fb-detail">
+                    <summary><FaLightbulb /> Recommendations</summary>
+                    <div className="mock-fb-body">
                       {feedback.recommendations && feedback.recommendations.length > 0 ? (
                         <ul className="recommendation-list">
                           {feedback.recommendations.map((recommendation, index) => (
@@ -1184,9 +1121,9 @@ const AIMockInterviewRoom = () => {
                       ) : (
                         <p>No specific recommendations provided</p>
                       )}
-                    </Accordion.Body>
-                  </Accordion.Item>
-                </Accordion>
+                    </div>
+                  </details>
+                </div>
                 
                 <div className="interview-summary">
                   <h3><FaFileAlt className="me-2" /> Interview Summary</h3>
@@ -1220,8 +1157,9 @@ const AIMockInterviewRoom = () => {
                 </div>
                 
                 <div className="feedback-actions">
-                  <Button 
-                    className="retry-btn feedback-btn"
+                  <button
+                    type="button"
+                    className="retry-btn"
                     onClick={() => {
                       setInterviewStage('intro');
                       setCurrentQuestion(0);
@@ -1231,14 +1169,14 @@ const AIMockInterviewRoom = () => {
                       setTranscription('');
                     }}
                   >
-                    <FaMicrophone className="me-2" /> Try Again
-                  </Button>
-                  
-                  <Link 
-                    to="/dashboard/candidate/applications" 
-                    className="return-btn feedback-btn"
+                    <FaMicrophone /> Try Again
+                  </button>
+
+                  <Link
+                    to="/dashboard/candidate/applications"
+                    className="return-btn"
                   >
-                    <FaArrowLeft className="me-2" /> Return to Applications
+                    <FaArrowLeft /> Return to Applications
                   </Link>
                 </div>
               </div>
@@ -1250,6 +1188,7 @@ const AIMockInterviewRoom = () => {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

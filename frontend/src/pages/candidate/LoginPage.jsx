@@ -13,30 +13,19 @@ const CandidateLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return;
-    }
-    
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    
-    // Clear any previous errors
+    if (!email || !password) { setError('Please fill in all fields'); return; }
+    if (!email.includes('@')) { setError('Please enter a valid email'); return; }
+
     setError('');
     setLoading(true);
-    
+
     try {
       const response = await candidateService.login(email, password);
-      
       if (response.success) {
         navigate(response.data.profileComplete ? '/dashboard/candidate' : '/complete-profile/candidate');
       }
-    } catch (error) {
-      setError(error.message || 'Invalid email or password');
+    } catch (err) {
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -46,67 +35,42 @@ const CandidateLoginPage = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h2>Candidate Login</h2>
-          <p className="auth-subtitle">Sign in to access your candidate portal</p>
+          <h2>Candidate sign in</h2>
         </div>
-        
+
         {error && <div className="auth-error">{error}</div>}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              className="form-control"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <input type="email" id="email" className="form-control" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              className="form-control"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <input type="password" id="password" className="form-control" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          
           <div className="forgot-password">
-            <Link to="/forgot-password?role=candidate" className="auth-link">Forgot Password?</Link>
+            <Link to="/forgot-password?role=candidate" className="auth-link">Forgot password?</Link>
           </div>
-          
           <div className="form-action">
             <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </div>
         </form>
-        
-        <div className="divider">
-          <span>or</span>
-        </div>
-        
+
+        <div className="divider"><span>or</span></div>
+
         <div className="social-login">
-          <GoogleAuthButton
-            role="candidate"
-            mode="login"
-            onError={setError}
-            onSuccess={(user) => navigate(authService.getDefaultRoute(user))}
-          />
+          <GoogleAuthButton role="candidate" mode="login" onError={setError} onSuccess={(user) => navigate(authService.getDefaultRoute(user))} />
         </div>
-        
+
         <div className="auth-footer">
-          Don't have an account? <Link to="/register/candidate" className="auth-link">Register here</Link>
+          No account? <Link to="/register/candidate" className="auth-link">Register</Link>
         </div>
       </div>
     </div>
   );
 };
 
-export default CandidateLoginPage; 
+export default CandidateLoginPage;

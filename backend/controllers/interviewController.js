@@ -5,6 +5,7 @@ const Application = require('../models/applicationModel');
 const mongoose = require('mongoose');
 const { createInterviewRequestNotification, createInterviewStatusNotification, createFeedbackNotification } = require('./notificationController');
 const { APPLICATION_STAGES, transitionApplication } = require('../utils/applicationStages');
+const videoService = require('../services/videoService');
 
 const INTERVIEW_STATUS_LABELS = {
   pending: 'Pending response',
@@ -252,10 +253,12 @@ const updateInterviewStatus = async (req, res) => {
     
     // If accepting, generate meeting link
     if (status === 'accepted' && !interview.meetingLink) {
-      // For now, just create a simple placeholder
-      // In a real implementation, integrate with Google Meet API or similar
-      const meetingId = Math.random().toString(36).substring(2, 12);
-      interview.meetingLink = `https://meet.example.com/${meetingId}`;
+      const meeting = await videoService.createOrUpdateMeeting(
+        interview._id,
+        process.env.FRONTEND_URL || ''
+      );
+      interview.meetingId = meeting.meetingId;
+      interview.meetingLink = meeting.meetingLink;
     }
     
     // If cancelling, update the associated application status

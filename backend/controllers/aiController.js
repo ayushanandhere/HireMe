@@ -3,11 +3,13 @@ const Interview = require('../models/interviewModel');
 const Application = require('../models/applicationModel');
 const Job = require('../models/jobModel');
 const Candidate = require('../models/candidateModel');
+const TrainingConversation = require('../models/trainingConversationModel');
 const { OpenAI } = require('openai');
 const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
 const isAIConfigured = Boolean(process.env.OPENAI_API_KEY);
+const TRAINING_CHAT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 const respondIfAIDisabled = (res) => {
   if (isAIConfigured) {
@@ -542,206 +544,148 @@ When assessing role fit:
   }
 };
 
-// Get initial context for the candidate AI training assistant
-exports.getTrainingContext = async (req, res) => {
-  try {
-    if (respondIfAIDisabled(res)) {
-      return;
-    }
-
-    const { applicationId } = req.params;
-    
-    // Validate applicationId
-    if (!applicationId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Application ID is required'
-      });
-    }
-    
-    // Fetch application details with populated candidate and job info
-    const application = await Application.findById(applicationId)
-      .populate({
-        path: 'candidate',
-        select: '-password'
-      })
-      .populate('job');
-    
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-    
-    // Extract candidate information
-    const candidate = application.candidate;
-    
-    // Extract job information
-    const job = application.job;
-    
-    if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found for this application'
-      });
-    }
-    
-    // Prepare candidate information summary
-    let candidateInfo = {
-      name: candidate.name,
-      email: candidate.email,
-      skills: candidate.skills || '',
-      parsedSkills: candidate.parsedSkills || [],
-      experience: candidate.experience || '',
-      education: []
-    };
-    
-    // Add parsed experience if available
-    if (candidate.parsedExperience && candidate.parsedExperience.length > 0) {
-      candidateInfo.parsedExperience = candidate.parsedExperience.map(exp => ({
-        company: exp.company,
-        role: exp.role,
-        startDate: exp.startDate,
-        endDate: exp.endDate || 'Present',
-        description: exp.description,
-        current: exp.current
-      }));
-    }
-    
-    // Add parsed education if available
-    if (candidate.parsedEducation && candidate.parsedEducation.length > 0) {
-      candidateInfo.education = candidate.parsedEducation.map(edu => ({
-        institution: edu.institution,
-        degree: edu.degree,
-        fieldOfStudy: edu.fieldOfStudy,
-        startDate: edu.startDate,
-        endDate: edu.endDate || 'Present',
-        current: edu.current
-      }));
-    }
-    
-    // Add ATS score if available
-    if (candidate.atsScore) {
-      candidateInfo.atsScore = candidate.atsScore;
-    }
-    
-    // Add application-specific information
-    let applicationInfo = {
-      stage: application.stage,
-      matchScore: application.matchScore || 0,
-      skillsMatch: application.skillsMatch || 0,
-      experienceRelevance: application.experienceRelevance || 0,
-      matchedSkills: application.matchedSkills || [],
-      missingSkills: application.missingSkills || [],
-      atsScore: application.atsScore || 0,
-      candidateRoleFit: application.candidateRoleFit || 0,
-      candidateRoleFitExplanation: application.candidateRoleFitExplanation || ''
-    };
-    
-    // Prepare initial message with personalized information for the candidate
-    let initialMessage = `Hello ${candidate.name}! I'm your AI interview training assistant for the ${job.title} position at ${job.company}. `;
-    
-    // Add more personalized information if available
-    if (application.candidateRoleFit) {
-      initialMessage += `Based on our analysis, you have a ${application.candidateRoleFit}% role fit for this position. `;
-    }
-    
-    if (application.skillsMatch) {
-      initialMessage += `You match ${application.skillsMatch}% of the required skills. `;
-    }
-    
-    if (application.missingSkills && application.missingSkills.length > 0) {
-      initialMessage += `I can help you prepare for questions about ${application.missingSkills.join(', ')}, which are skills mentioned in the job description that weren't found in your resume. `;
-    }
-    
-    initialMessage += "I'm here to help you prepare for your interview by providing guidance on technical concepts, suggesting practice questions, and offering interview strategies tailored to this role. ";
-    initialMessage += "What specific aspect of the interview would you like help with today?";
-    
-    return res.status(200).json({
-      success: true,
-      data: {
-        initialMessage,
-        candidate: candidateInfo,
-        job: {
-          title: job.title,
-          description: job.description || '',
-          company: job.company,
-          location: job.location,
-          type: job.type,
-          skills: job.skills || [],
-          experienceLevel: job.experienceLevel,
-          experienceYears: job.experienceYears
-        },
-        application: applicationInfo
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error getting AI training assistant context:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get AI training assistant context'
-    });
-  }
+const sanitizeConversationTitle = (title = '') => {
+  const trimmed = String(title).trim().replace(/\s+/g, ' ');
+  if (!trimmed) return 'New chat';
+  return trimmed.slice(0, 80);
 };
 
-// Handle AI training assistant messages
-exports.handleTrainingMessage = async (req, res) => {
-  try {
-    if (respondIfAIDisabled(res)) {
-      return;
-    }
+const deriveConversationTitle = (message = '') => {
+  const cleaned = String(message).replace(/\s+/g, ' ').trim();
+  if (!cleaned) return 'New chat';
+  return sanitizeConversationTitle(cleaned.replace(/[.!?]+$/, ''));
+};
 
-    const { message, applicationId, responseMode = 'normal' } = req.body;
-    
-    // Validate required fields
-    if (!message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Message is required'
-      });
-    }
-    
-    if (!applicationId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Application ID is required'
-      });
-    }
-    
-    // Fetch application details with comprehensive population
-    const application = await Application.findById(applicationId)
-      .populate({
-        path: 'candidate',
-        select: '-password'
-      })
-      .populate('job');
-    
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-    
-    // Extract candidate and job information
-    const candidate = application.candidate;
-    const job = application.job;
-    
-    if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found for this application'
-      });
-    }
-    
-    // Resume analysis data would be fetched here if we had the model
-    // For now, we'll use the application data we already have
-    let resumeAnalysis = null;
-    
-    // Prepare system prompt for the AI
-    let systemPrompt = `You are an advanced AI interview training assistant helping a candidate prepare for a job interview. You are a study companion and smart guide for the candidate, providing extremely accurate and context-aware responses.
+const formatConversationPreview = (conversation) => {
+  const lastMessage = conversation.messages?.[conversation.messages.length - 1];
+  return {
+    id: conversation._id,
+    title: conversation.title,
+    isStarred: conversation.isStarred,
+    updatedAt: conversation.updatedAt,
+    lastUsedAt: conversation.lastUsedAt,
+    messageCount: conversation.messages?.length || 0,
+    preview: lastMessage ? lastMessage.content.slice(0, 140) : ''
+  };
+};
+
+const buildTrainingContextData = async (applicationId, candidateId) => {
+  if (!applicationId) {
+    const error = new Error('Application ID is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const application = await Application.findById(applicationId)
+    .populate({
+      path: 'candidate',
+      select: '-password'
+    })
+    .populate('job');
+
+  if (!application) {
+    const error = new Error('Application not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const ownerId = application.candidate?._id?.toString() || application.candidate?.toString();
+  if (candidateId && ownerId !== candidateId.toString()) {
+    const error = new Error('You are not authorized to access this application');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const candidate = application.candidate;
+  const job = application.job;
+
+  if (!job) {
+    const error = new Error('Job not found for this application');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const candidateInfo = {
+    name: candidate.name,
+    email: candidate.email,
+    skills: candidate.skills || '',
+    parsedSkills: candidate.parsedSkills || [],
+    experience: candidate.experience || '',
+    education: []
+  };
+
+  if (candidate.parsedExperience && candidate.parsedExperience.length > 0) {
+    candidateInfo.parsedExperience = candidate.parsedExperience.map((exp) => ({
+      company: exp.company,
+      role: exp.role,
+      startDate: exp.startDate,
+      endDate: exp.endDate || 'Present',
+      description: exp.description,
+      current: exp.current
+    }));
+  }
+
+  if (candidate.parsedEducation && candidate.parsedEducation.length > 0) {
+    candidateInfo.education = candidate.parsedEducation.map((edu) => ({
+      institution: edu.institution,
+      degree: edu.degree,
+      fieldOfStudy: edu.fieldOfStudy,
+      startDate: edu.startDate,
+      endDate: edu.endDate || 'Present',
+      current: edu.current
+    }));
+  }
+
+  if (candidate.atsScore) {
+    candidateInfo.atsScore = candidate.atsScore;
+  }
+
+  const applicationInfo = {
+    stage: application.stage,
+    matchScore: application.matchScore || 0,
+    skillsMatch: application.skillsMatch || 0,
+    experienceRelevance: application.experienceRelevance || 0,
+    matchedSkills: application.matchedSkills || [],
+    missingSkills: application.missingSkills || [],
+    atsScore: application.atsScore || 0,
+    candidateRoleFit: application.candidateRoleFit || 0,
+    candidateRoleFitExplanation: application.candidateRoleFitExplanation || ''
+  };
+
+  let initialMessage = `Hello ${candidate.name}! I'm your AI interview training assistant for the ${job.title} position`;
+  if (job.company) {
+    initialMessage += ` at ${job.company}`;
+  }
+  initialMessage += '. ';
+
+  if (application.candidateRoleFit) {
+    initialMessage += `Your current role fit is ${application.candidateRoleFit}%. `;
+  }
+
+  if (application.skillsMatch) {
+    initialMessage += `You already match ${application.skillsMatch}% of the required skills. `;
+  }
+
+  if (application.missingSkills && application.missingSkills.length > 0) {
+    initialMessage += `The biggest areas to prepare are ${application.missingSkills.join(', ')}. `;
+  }
+
+  initialMessage += 'Ask for likely questions, stronger answer framing, technical refreshers, or practice plans tailored to this role.';
+
+  return {
+    application,
+    candidate,
+    job,
+    candidateInfo,
+    applicationInfo,
+    initialMessage
+  };
+};
+
+const buildTrainingSystemPrompt = ({ application, candidate, job, responseMode, message }) => {
+  let systemPrompt = `You are an advanced AI interview training assistant helping a candidate prepare for a specific job interview.
+
+Your tone should feel like an expert coach: calm, sharp, supportive, and highly practical.
 
 ## CANDIDATE PROFILE
 Name: ${candidate.name}
@@ -754,15 +698,15 @@ ${candidate.portfolio ? `Portfolio: ${candidate.portfolio}` : ''}
 ${candidate.github ? `GitHub: ${candidate.github}` : ''}
 ${candidate.linkedin ? `LinkedIn: ${candidate.linkedin}` : ''}
 
-${candidate.parsedExperience && candidate.parsedExperience.length > 0 ? 
+${candidate.parsedExperience && candidate.parsedExperience.length > 0 ?
 `## WORK HISTORY
-${candidate.parsedExperience.map(exp => 
+${candidate.parsedExperience.map((exp) =>
   `- ${exp.role} at ${exp.company} (${exp.startDate} - ${exp.endDate || 'Present'})\n  ${exp.description || ''}`
 ).join('\n')}` : ''}
 
-${candidate.parsedEducation && candidate.parsedEducation.length > 0 ? 
+${candidate.parsedEducation && candidate.parsedEducation.length > 0 ?
 `## EDUCATION
-${candidate.parsedEducation.map(edu => 
+${candidate.parsedEducation.map((edu) =>
   `- ${edu.degree} in ${edu.fieldOfStudy} from ${edu.institution} (${edu.startDate} - ${edu.endDate || 'Present'})`
 ).join('\n')}` : ''}
 
@@ -775,7 +719,7 @@ Experience Level: ${job.experienceLevel || 'Not specified'}
 Required Years: ${job.experienceYears || 'Not specified'}
 
 ## JOB DESCRIPTION
-${job.description}
+${job.description || 'Not specified'}
 
 ## REQUIRED SKILLS
 ${job.skills?.join(', ') || 'Not specified'}
@@ -785,124 +729,366 @@ Overall Role Fit: ${application.candidateRoleFit || 0}%
 Skills Match: ${application.skillsMatch || 0}%
 Experience Relevance: ${application.experienceRelevance || 0}%
 ATS Score: ${application.atsScore || 0}/100
-
 Matched Skills: ${application.matchedSkills?.join(', ') || 'None'}
 Skills to Develop: ${application.missingSkills?.join(', ') || 'None'}
-${application.candidateRoleFitExplanation ? `\nRole Fit Analysis: ${application.candidateRoleFitExplanation}` : ''}
+${application.candidateRoleFitExplanation ? `Role Fit Analysis: ${application.candidateRoleFitExplanation}` : ''}
 
-## ADDITIONAL GUIDANCE
-Based on your skills match and role fit, focus on demonstrating your matched skills and preparing to discuss how you can develop in areas where there are gaps.
+## RESPONSE RULES
+- Ground every answer in the specific role and the candidate's background.
+- Prioritize actionable preparation advice over generic motivational language.
+- When useful, structure answers with short sections or bullets.
+- For behavioral prep, turn the candidate's background into concrete answer angles.
+- For technical prep, be accurate and explain concepts clearly with examples when needed.
+- If the candidate is weak in an area, suggest how to address it honestly and strategically.
+- Do not invent facts about the candidate. If something is missing, say so.
+- Keep the flow conversational, as if continuing a real chat thread.`;
 
-## YOUR ROLE AS AN AI ASSISTANT
-You are an expert interview coach with deep knowledge of both technical and non-technical aspects of interviewing. Your responses must be:
+  const normalizedMode = String(responseMode || 'normal').toLowerCase();
+  if (normalizedMode === 'deep') {
+    systemPrompt += '\n- Default to more detailed answers with frameworks, examples, and follow-up drills.';
+  } else {
+    systemPrompt += '\n- Default to concise, focused answers unless the user clearly wants depth.';
+  }
 
-1. EXTREMELY ACCURATE - Provide factually correct information about technical concepts, industry standards, and interview practices
-2. CONTEXT-AWARE - Tailor all advice to the specific job, company, and candidate profile
-3. COMPREHENSIVE - Consider the candidate's full background, skills, and the job requirements in every response
-4. EDUCATIONAL - Explain complex concepts clearly when the candidate needs to understand technical topics
-5. STRATEGIC - Offer practical strategies to highlight strengths and address skill gaps during interviews
+  const isTechnicalQuestion =
+    message.toLowerCase().includes('coding') ||
+    message.toLowerCase().includes('algorithm') ||
+    message.toLowerCase().includes('data structure') ||
+    message.toLowerCase().includes('programming') ||
+    message.toLowerCase().includes('technical') ||
+    /\b(java|javascript|python|c\+\+|react|node|sql|database|api)\b/i.test(message);
 
-Your specific responsibilities include:
-1. Providing in-depth preparation for technical and behavioral questions directly related to this job
-2. Offering detailed guidance on addressing skill gaps identified in the application analysis
-3. Creating customized interview strategies that leverage the candidate's background for this specific role
-4. Explaining technical concepts with precision and clarity when needed
-5. Suggesting targeted practice exercises and resources to improve interview performance
-6. Answering general computer science and coding questions with expert-level accuracy
-7. Helping the candidate understand industry expectations for the role
+  const isInterviewStrategy =
+    message.toLowerCase().includes('interview strategy') ||
+    message.toLowerCase().includes('prepare for interview') ||
+    message.toLowerCase().includes('interview question') ||
+    message.toLowerCase().includes('behavioral question');
 
-When discussing technical topics:
-- Provide accurate, up-to-date information about programming languages, frameworks, and technologies
-- Explain concepts thoroughly with examples when appropriate
-- Correct any misconceptions while being supportive
-- Tailor technical advice to the specific technologies mentioned in the job description
-- When asked about coding concepts, provide detailed explanations with code examples if appropriate
-- For algorithms and data structures, explain time and space complexity when relevant
+  if (isTechnicalQuestion) {
+    systemPrompt += '\n- This question is technical. Include accurate explanations, examples, and best practices. Mention tradeoffs or complexity when relevant.';
+  }
 
-When discussing behavioral aspects:
-- Help craft compelling stories from the candidate's experience that demonstrate relevant skills
-- Suggest specific examples from their background that address potential interview questions
-- Provide frameworks for structuring responses to common behavioral questions
-- Offer guidance on how to demonstrate soft skills like leadership, teamwork, and problem-solving
+  if (isInterviewStrategy) {
+    systemPrompt += '\n- This question is about interview strategy. Give direct, specific advice tailored to the role and candidate profile.';
+  }
 
-Be supportive, encouraging, and specific in your advice. Focus on practical, actionable guidance that will genuinely improve the candidate's interview performance.`;
-    
-    // Detect if the message is a technical question
-    const isTechnicalQuestion = message.toLowerCase().includes('coding') || 
-                              message.toLowerCase().includes('algorithm') || 
-                              message.toLowerCase().includes('data structure') || 
-                              message.toLowerCase().includes('programming') || 
-                              message.toLowerCase().includes('technical') || 
-                              /\b(java|javascript|python|c\+\+|react|node|sql|database|api)\b/i.test(message);
+  return {
+    systemPrompt,
+    questionType: isTechnicalQuestion ? 'technical' : isInterviewStrategy ? 'strategy' : 'general'
+  };
+};
 
-    // Detect if it's about interview strategy
-    const isInterviewStrategy = message.toLowerCase().includes('interview strategy') || 
-                              message.toLowerCase().includes('prepare for interview') || 
-                              message.toLowerCase().includes('interview question') || 
-                              message.toLowerCase().includes('behavioral question');
-                              
-    // Adjust system prompt based on response mode and question type
-    if (responseMode === 'detailed' || isTechnicalQuestion) {
-      systemPrompt += '\n\nProvide detailed, comprehensive responses with examples and in-depth explanations. Include code examples where appropriate.';
-    } else if (responseMode === 'concise') {
-      systemPrompt += '\n\nProvide concise, to-the-point responses focusing on key information.';
+const createSeededTrainingConversation = async ({ applicationId, candidateId, title }) => {
+  const context = await buildTrainingContextData(applicationId, candidateId);
+  const conversation = await TrainingConversation.create({
+    candidate: candidateId,
+    application: applicationId,
+    title: sanitizeConversationTitle(title),
+    messages: [
+      {
+        role: 'assistant',
+        content: context.initialMessage,
+        timestamp: new Date()
+      }
+    ],
+    lastUsedAt: new Date()
+  });
+
+  return { conversation, context };
+};
+
+// Get initial context for the candidate AI training assistant
+exports.getTrainingContext = async (req, res) => {
+  try {
+    if (respondIfAIDisabled(res)) {
+      return;
     }
-    
-    // Add specific guidance for technical questions
-    if (isTechnicalQuestion) {
-      systemPrompt += '\n\nThis appears to be a technical question. Please provide a thorough, accurate explanation with examples. If relevant, include code snippets, discuss time/space complexity, and mention best practices. Relate your answer specifically to the job requirements whenever possible.';
+
+    const context = await buildTrainingContextData(req.params.applicationId, req.user._id);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        initialMessage: context.initialMessage,
+        candidate: context.candidateInfo,
+        job: {
+          title: context.job.title,
+          description: context.job.description || '',
+          company: context.job.company,
+          location: context.job.location,
+          type: context.job.type,
+          skills: context.job.skills || [],
+          experienceLevel: context.job.experienceLevel,
+          experienceYears: context.job.experienceYears
+        },
+        application: context.applicationInfo
+      }
+    });
+  } catch (error) {
+    console.error('Error getting AI training assistant context:', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to get AI training assistant context'
+    });
+  }
+};
+
+exports.listTrainingConversations = async (req, res) => {
+  try {
+    await buildTrainingContextData(req.params.applicationId, req.user._id);
+
+    const conversations = await TrainingConversation.find({
+      candidate: req.user._id,
+      application: req.params.applicationId
+    }).sort({ isStarred: -1, lastUsedAt: -1, updatedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: conversations.map(formatConversationPreview)
+    });
+  } catch (error) {
+    console.error('Error listing training conversations:', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to list training conversations'
+    });
+  }
+};
+
+exports.createTrainingConversation = async (req, res) => {
+  try {
+    const { title } = req.body || {};
+    const { conversation } = await createSeededTrainingConversation({
+      applicationId: req.params.applicationId,
+      candidateId: req.user._id,
+      title
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        conversation: formatConversationPreview(conversation),
+        messages: conversation.messages
+      }
+    });
+  } catch (error) {
+    console.error('Error creating training conversation:', error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Failed to create training conversation'
+    });
+  }
+};
+
+exports.getTrainingConversation = async (req, res) => {
+  try {
+    const conversation = await TrainingConversation.findOne({
+      _id: req.params.conversationId,
+      candidate: req.user._id
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
     }
-    
-    // Add specific guidance for interview strategy questions
-    if (isInterviewStrategy) {
-      systemPrompt += '\n\nThis appears to be about interview strategy. Provide specific, actionable advice tailored to this candidate\'s background and the specific job requirements. Include example answers or frameworks where appropriate.';
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        conversation: formatConversationPreview(conversation),
+        messages: conversation.messages
+      }
+    });
+  } catch (error) {
+    console.error('Error loading training conversation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load training conversation'
+    });
+  }
+};
+
+exports.updateTrainingConversation = async (req, res) => {
+  try {
+    const { title, isStarred } = req.body || {};
+    const conversation = await TrainingConversation.findOne({
+      _id: req.params.conversationId,
+      candidate: req.user._id
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
     }
-    
-    // Prepare the conversation for OpenAI
-    const conversation = [
+
+    if (typeof title === 'string') {
+      conversation.title = sanitizeConversationTitle(title);
+    }
+
+    if (typeof isStarred === 'boolean') {
+      conversation.isStarred = isStarred;
+    }
+
+    await conversation.save();
+
+    return res.status(200).json({
+      success: true,
+      data: formatConversationPreview(conversation)
+    });
+  } catch (error) {
+    console.error('Error updating training conversation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update training conversation'
+    });
+  }
+};
+
+exports.deleteTrainingConversation = async (req, res) => {
+  try {
+    const conversation = await TrainingConversation.findOneAndDelete({
+      _id: req.params.conversationId,
+      candidate: req.user._id
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Conversation deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting training conversation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete training conversation'
+    });
+  }
+};
+
+// Handle AI training assistant messages
+exports.handleTrainingMessage = async (req, res) => {
+  try {
+    if (respondIfAIDisabled(res)) {
+      return;
+    }
+
+    const {
+      message,
+      applicationId,
+      conversationId,
+      responseMode = 'normal'
+    } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message is required'
+      });
+    }
+
+    if (!applicationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Application ID is required'
+      });
+    }
+
+    const context = await buildTrainingContextData(applicationId, req.user._id);
+
+    let conversation = null;
+    if (conversationId) {
+      conversation = await TrainingConversation.findOne({
+        _id: conversationId,
+        candidate: req.user._id,
+        application: applicationId
+      });
+    }
+
+    if (!conversation) {
+      const seeded = await createSeededTrainingConversation({
+        applicationId,
+        candidateId: req.user._id,
+        title: deriveConversationTitle(message)
+      });
+      conversation = seeded.conversation;
+    }
+
+    const { systemPrompt, questionType } = buildTrainingSystemPrompt({
+      application: context.application,
+      candidate: context.candidate,
+      job: context.job,
+      responseMode,
+      message
+    });
+
+    const conversationHistory = (conversation.messages || [])
+      .slice(-18)
+      .map((entry) => ({
+        role: entry.role,
+        content: entry.content
+      }));
+
+    const openaiMessages = [
       { role: 'system', content: systemPrompt },
+      ...conversationHistory,
       { role: 'user', content: message }
     ];
-    
-    // Get response from OpenAI - use GPT-4 for better quality
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: conversation,
-      max_tokens: 2500,
-      temperature: 0.5
+      model: TRAINING_CHAT_MODEL,
+      messages: openaiMessages,
+      max_tokens: String(responseMode).toLowerCase() === 'deep' ? 2200 : 1400,
+      temperature: String(responseMode).toLowerCase() === 'deep' ? 0.65 : 0.45
     });
-    
-    // Extract the response
+
     const response = completion.choices[0].message.content;
-    
-    // Log the interaction for analytics (without storing sensitive data)
-    console.log(`AI Training interaction for application ${applicationId} - Question type: ${isTechnicalQuestion ? 'Technical' : isInterviewStrategy ? 'Strategy' : 'General'}`);
-    
-    // Save the interaction to the database for future improvement
-    try {
-      // You could implement a model to store interactions if needed
-      // await AIInteraction.create({
-      //   applicationId,
-      //   questionType: isTechnicalQuestion ? 'technical' : isInterviewStrategy ? 'strategy' : 'general',
-      //   timestamp: new Date()
-      // });
-    } catch (error) {
-      console.log('Error saving AI interaction:', error);
+
+    conversation.messages.push({
+      role: 'user',
+      content: message,
+      timestamp: new Date()
+    });
+    conversation.messages.push({
+      role: 'assistant',
+      content: response,
+      timestamp: new Date()
+    });
+
+    if (!conversation.title || conversation.title === 'New chat') {
+      conversation.title = deriveConversationTitle(message);
     }
-    
+
+    conversation.lastUsedAt = new Date();
+    await conversation.save();
+
+    console.log(
+      `AI Training interaction for application ${applicationId} - Question type: ${questionType}`
+    );
+
     return res.status(200).json({
       success: true,
       data: {
         response,
-        questionType: isTechnicalQuestion ? 'technical' : isInterviewStrategy ? 'strategy' : 'general'
+        questionType,
+        conversation: formatConversationPreview(conversation),
+        messages: conversation.messages
       }
     });
-    
   } catch (error) {
     console.error('Error handling AI training assistant message:', error);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to process message with AI training assistant'
+      message: error.message || 'Failed to process message with AI training assistant'
     });
   }
 };

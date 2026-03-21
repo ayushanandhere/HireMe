@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FaArrowLeft,
   FaBuilding,
   FaCamera,
   FaCheckCircle,
+  FaExclamationTriangle,
   FaGlobe,
   FaMapMarkerAlt,
   FaPhone,
   FaSave,
   FaSpinner,
-  FaUsers,
 } from 'react-icons/fa';
 import { buildAssetUrl, recruiterService } from '../../services/api';
 import '../ProfilePages.css';
@@ -49,9 +48,7 @@ const RecruiterProfilePage = () => {
           recruiterService.getDashboardSummary(),
         ]);
 
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         if (!profileResponse.success) {
           throw new Error(profileResponse.message || 'Failed to load recruiter profile.');
@@ -72,29 +69,18 @@ const RecruiterProfilePage = () => {
           profilePicture: null,
         }));
 
-        if (summaryResponse.success) {
-          setSummary(summaryResponse.data);
-        }
-
+        if (summaryResponse.success) setSummary(summaryResponse.data);
         setError('');
       } catch (err) {
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         setError(err.message || 'Unable to load recruiter profile.');
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     };
 
     load();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   useEffect(() => () => {
@@ -107,10 +93,7 @@ const RecruiterProfilePage = () => {
     const { name, value, files } = event.target;
 
     if (name === 'profilePicture') {
-      if (profilePicturePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(profilePicturePreview);
-      }
-
+      if (profilePicturePreview.startsWith('blob:')) URL.revokeObjectURL(profilePicturePreview);
       const file = files?.[0] || null;
       setFormData((current) => ({ ...current, profilePicture: file }));
       setProfilePicturePreview(file ? URL.createObjectURL(file) : '');
@@ -138,9 +121,7 @@ const RecruiterProfilePage = () => {
       payload.append('phone', formData.phone);
       payload.append('bio', formData.bio);
 
-      if (formData.profilePicture) {
-        payload.append('profilePicture', formData.profilePicture);
-      }
+      if (formData.profilePicture) payload.append('profilePicture', formData.profilePicture);
 
       const response = await recruiterService.updateProfile(payload);
 
@@ -149,16 +130,10 @@ const RecruiterProfilePage = () => {
       }
 
       setProfile(response.data);
-      setFormData((current) => ({
-        ...current,
-        ...response.data,
-        profilePicture: null,
-      }));
-      if (profilePicturePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(profilePicturePreview);
-      }
+      setFormData((current) => ({ ...current, ...response.data, profilePicture: null }));
+      if (profilePicturePreview.startsWith('blob:')) URL.revokeObjectURL(profilePicturePreview);
       setProfilePicturePreview('');
-      setSuccess('Recruiter profile updated. Candidate-facing recruiter identity now reads from the new profile data.');
+      setSuccess('Profile saved.');
     } catch (err) {
       setError(err.message || 'Unable to save recruiter profile.');
     } finally {
@@ -168,11 +143,8 @@ const RecruiterProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="identity-loading">
-        <div className="identity-loading-card surface-card">
-          <div className="identity-loading-spinner" />
-          <p>Loading recruiter identity...</p>
-        </div>
+      <div className="pf-loading">
+        <div className="pf-spinner" />
       </div>
     );
   }
@@ -181,324 +153,151 @@ const RecruiterProfilePage = () => {
   const liveRoles = summary?.jobs?.active || 0;
   const totalApplications = summary?.pipeline?.totalApplications || 0;
   const upcomingInterviews = summary?.interviews?.upcoming || 0;
-  const profileStateLabel = profile?.profileComplete ? 'Complete' : 'Needs attention';
-  const pictureStateLabel = profile?.profilePictureUrl || profilePicturePreview ? 'Photo visible' : 'Initials only';
 
   return (
-    <div className="identity-page page-shell">
-      <div className="identity-shell">
-        <section className="identity-top">
-          <article className="identity-masthead">
-            <div className="identity-masthead-copy">
-              <span className="identity-kicker">Recruiter Profile</span>
-              <h1>Run a polished hiring identity.</h1>
-              <p>
-                Candidate trust, role presentation, and interview context all depend on this profile.
-                Keep the recruiter and company signal consistent across the funnel.
-              </p>
+    <div className="pf-page page-shell">
+      {/* Header */}
+      <header className="pf-header">
+        <div className="pf-header-left">
+          <h1>Profile</h1>
+        </div>
+        <div className="pf-header-actions">
+          <Link to="/dashboard/recruiter/jobs/create" className="action-link primary">Publish role</Link>
+        </div>
+      </header>
+
+      <div className="pf-layout">
+        {/* Sidebar */}
+        <aside className="pf-sidebar">
+          <article className="pf-card">
+            <div className="pf-preview">
+              {avatarSrc ? (
+                <div className="pf-avatar"><img src={avatarSrc} alt={formData.name || 'Recruiter'} /></div>
+              ) : (
+                <div className="pf-avatar pf-avatar-placeholder">{(formData.name || 'R').charAt(0).toUpperCase()}</div>
+              )}
+              <div className="pf-preview-info">
+                <strong>{formData.name || 'Your name'}</strong>
+                <span>{formData.title || 'Add a title'}</span>
+              </div>
             </div>
 
-            <div className="identity-masthead-actions">
-              <Link to="/dashboard/recruiter" className="identity-button identity-button-secondary">
-                <FaArrowLeft /> Back to dashboard
-              </Link>
-              <Link to="/dashboard/recruiter/jobs/create" className="identity-button identity-button-primary">
-                Publish a role
-              </Link>
-            </div>
-
-            <div className="identity-metric-strip">
-              <article className="identity-metric">
-                <span>Live roles</span>
-                <strong>{liveRoles}</strong>
-              </article>
-              <article className="identity-metric">
-                <span>Total applications</span>
-                <strong>{totalApplications}</strong>
-              </article>
-              <article className="identity-metric">
-                <span>Upcoming interviews</span>
-                <strong>{upcomingInterviews}</strong>
-              </article>
+            <div className="pf-preview-meta">
+              {formData.company && <span><FaBuilding /> {formData.company}</span>}
+              {formData.location && <span><FaMapMarkerAlt /> {formData.location}</span>}
+              {formData.phone && <span><FaPhone /> {formData.phone}</span>}
+              {formData.companyWebsite && (
+                <a href={formData.companyWebsite} target="_blank" rel="noreferrer">
+                  <FaGlobe /> {formData.companyWebsite.replace(/^https?:\/\//, '')}
+                </a>
+              )}
             </div>
           </article>
 
-          <aside className="identity-preview-panel">
-            <span className="identity-kicker">Candidate Preview</span>
-            <div className="identity-preview-head">
-              {avatarSrc ? (
-                <div className="identity-avatar">
-                  <img src={avatarSrc} alt={formData.name || 'Recruiter'} />
-                </div>
-              ) : (
-                <div className="identity-avatar-placeholder">
-                  {(formData.name || 'R').charAt(0).toUpperCase()}
-                </div>
-              )}
-
-              <div className="identity-preview-copy">
-                <strong>{formData.name || 'Your recruiter name'}</strong>
-                <span>{formData.title || 'Add the role candidates should recognize immediately.'}</span>
-              </div>
+          <article className="pf-card">
+            <h3 className="pf-card-title">Overview</h3>
+            <div className="pf-stats">
+              <div className="pf-stat-row"><span>Live roles</span><strong>{liveRoles}</strong></div>
+              <div className="pf-stat-row"><span>Total applications</span><strong>{totalApplications}</strong></div>
+              <div className="pf-stat-row"><span>Upcoming interviews</span><strong>{upcomingInterviews}</strong></div>
             </div>
+          </article>
 
-            <div className="identity-preview-meta">
-              {formData.company && (
-                <span>
-                  <FaBuilding /> {formData.company}
-                </span>
-              )}
-              {formData.location && (
-                <span>
-                  <FaMapMarkerAlt /> {formData.location}
-                </span>
-              )}
-              {formData.companyWebsite && (
-                <span>
-                  <FaGlobe /> {formData.companyWebsite.replace(/^https?:\/\//, '')}
-                </span>
-              )}
-            </div>
-
-            <div className="identity-preview-stats">
-              <article>
-                <span>Profile state</span>
-                <strong>{profileStateLabel}</strong>
-              </article>
-              <article>
-                <span>Linked roles</span>
-                <strong>{liveRoles}</strong>
-              </article>
-              <article>
-                <span>Profile image</span>
-                <strong>{pictureStateLabel}</strong>
-              </article>
-            </div>
-          </aside>
-        </section>
-
-        <section className="identity-layout">
-          <aside className="identity-rail">
-            <article className="identity-card">
-              <div className="identity-card-head">
-                <div>
-                  <span className="identity-kicker">Company Signal</span>
-                  <h3>What candidates infer</h3>
-                </div>
-                <span className={`signal-chip ${profile?.profileComplete ? 'positive' : 'review'}`}>
-                  {profileStateLabel}
-                </span>
-              </div>
-
-              <div className="identity-rail-list">
-                <div className="identity-rail-row">
-                  <span>Company</span>
-                  <strong>{formData.company || 'Add company name'}</strong>
-                </div>
-                <div className="identity-rail-row">
-                  <span>Industry</span>
-                  <strong>{formData.industry || 'Not specified'}</strong>
-                </div>
-                <div className="identity-rail-row">
-                  <span>Company size</span>
-                  <strong>{formData.companySize || 'Not specified'}</strong>
-                </div>
+          {(formData.company || formData.industry) && (
+            <article className="pf-card">
+              <h3 className="pf-card-title">Company</h3>
+              <div className="pf-stats">
+                {formData.company && <div className="pf-stat-row"><span>Company</span><strong>{formData.company}</strong></div>}
+                {formData.industry && <div className="pf-stat-row"><span>Industry</span><strong>{formData.industry}</strong></div>}
+                {formData.companySize && <div className="pf-stat-row"><span>Size</span><strong>{formData.companySize}</strong></div>}
               </div>
             </article>
+          )}
+        </aside>
 
-            <article className="identity-card">
-              <div className="identity-card-head">
-                <div>
-                  <span className="identity-kicker">Funnel Effect</span>
-                  <h3>Shared recruiter signal</h3>
+        {/* Form */}
+        <main>
+          <div className="pf-form-card">
+            <form onSubmit={handleSubmit}>
+              {/* Recruiter details */}
+              <section className="pf-section">
+                <h2 className="pf-section-title">Recruiter details</h2>
+                <div className="pf-fields">
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-name">Full name</label>
+                    <input id="recruiter-name" name="name" value={formData.name} onChange={handleChange} />
+                  </div>
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-title">Title</label>
+                    <input id="recruiter-title" name="title" value={formData.title} onChange={handleChange} placeholder="Lead recruiter" />
+                  </div>
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-company">Company</label>
+                    <input id="recruiter-company" name="company" value={formData.company} onChange={handleChange} placeholder="Acme Labs" />
+                  </div>
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-website">Company website</label>
+                    <input id="recruiter-website" name="companyWebsite" value={formData.companyWebsite} onChange={handleChange} placeholder="https://www.company.com" />
+                  </div>
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-location">Location</label>
+                    <input id="recruiter-location" name="location" value={formData.location} onChange={handleChange} placeholder="Bengaluru, India" />
+                  </div>
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-phone">Phone</label>
+                    <input id="recruiter-phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="+91 90000 00000" />
+                  </div>
                 </div>
+              </section>
+
+              {/* Company details */}
+              <section className="pf-section">
+                <h2 className="pf-section-title">Company details</h2>
+
+                <div className="pf-evidence-grid">
+                  <div className="pf-field">
+                    <label htmlFor="recruiter-size">Company size</label>
+                    <select id="recruiter-size" name="companySize" value={formData.companySize} onChange={handleChange}>
+                      <option value="">Select size</option>
+                      {companySizeOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="pf-upload">
+                    <div className="pf-upload-info">
+                      <span className="pf-upload-label">Profile picture</span>
+                      <strong>{formData.profilePicture ? formData.profilePicture.name : 'PNG, JPG, or WEBP'}</strong>
+                    </div>
+                    <label className="pf-file-btn" htmlFor="recruiter-picture">
+                      <FaCamera /> Upload
+                      <input id="recruiter-picture" type="file" name="profilePicture" accept="image/png,image/jpeg,image/webp" onChange={handleChange} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pf-field">
+                  <label htmlFor="recruiter-industry">Industry</label>
+                  <input id="recruiter-industry" name="industry" value={formData.industry} onChange={handleChange} placeholder="Technology" />
+                </div>
+
+                <div className="pf-field pf-field-wide">
+                  <label htmlFor="recruiter-bio">Company summary</label>
+                  <textarea id="recruiter-bio" name="bio" value={formData.bio} onChange={handleChange} placeholder="What your company does and what candidates can expect." />
+                </div>
+              </section>
+
+              {/* Save */}
+              <div className="pf-savebar">
+                <button type="submit" className="pf-save-btn" disabled={saving}>
+                  {saving ? <><FaSpinner className="pf-inline-spin" /> Saving...</> : <><FaSave /> Save profile</>}
+                </button>
               </div>
 
-              <div className="identity-rail-list">
-                <div className="identity-rail-row">
-                  <span>Jobs linked</span>
-                  <strong>{liveRoles} live roles reflect this recruiter profile</strong>
-                </div>
-                <div className="identity-rail-row">
-                  <span>Profile image</span>
-                  <strong>{pictureStateLabel}</strong>
-                </div>
-              </div>
-
-              <p className="identity-note">
-                Updating the company name here also updates recruiter-owned jobs so candidate job views
-                stay aligned with the latest company identity.
-              </p>
-            </article>
-          </aside>
-
-          <main className="identity-main">
-            <article className="identity-card identity-editor">
-              <form onSubmit={handleSubmit}>
-                <section className="identity-section">
-                  <div className="identity-section-head">
-                    <div>
-                      <span className="identity-kicker">Core Identity</span>
-                      <h2>Recruiter details</h2>
-                      <p>The recruiter and company details candidates rely on when deciding whether to engage.</p>
-                    </div>
-                    <span className="signal-chip active">Live to candidates</span>
-                  </div>
-
-                  <div className="identity-form-grid">
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-name">Full name</label>
-                      <input id="recruiter-name" name="name" value={formData.name} onChange={handleChange} />
-                    </div>
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-title">Title</label>
-                      <input
-                        id="recruiter-title"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleChange}
-                        placeholder="Lead recruiter"
-                      />
-                    </div>
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-company">Company</label>
-                      <input
-                        id="recruiter-company"
-                        name="company"
-                        value={formData.company}
-                        onChange={handleChange}
-                        placeholder="Acme Labs"
-                      />
-                    </div>
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-website">Company website</label>
-                      <input
-                        id="recruiter-website"
-                        name="companyWebsite"
-                        value={formData.companyWebsite}
-                        onChange={handleChange}
-                        placeholder="https://www.company.com"
-                      />
-                    </div>
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-location">Location</label>
-                      <input
-                        id="recruiter-location"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                        placeholder="Bengaluru, India"
-                      />
-                    </div>
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-phone">Phone</label>
-                      <input
-                        id="recruiter-phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="+91 90000 00000"
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="identity-section">
-                  <div className="identity-section-head">
-                    <div>
-                      <span className="identity-kicker">Company Context</span>
-                      <h2>Team and brand details</h2>
-                      <p>Frame the company clearly so the public-facing recruiter profile feels credible and complete.</p>
-                    </div>
-                  </div>
-
-                  <div className="identity-evidence-grid">
-                    <div className="identity-form-field identity-form-field-compact">
-                      <label htmlFor="recruiter-size">Company size</label>
-                      <select
-                        id="recruiter-size"
-                        name="companySize"
-                        value={formData.companySize}
-                        onChange={handleChange}
-                      >
-                        <option value="">Select size</option>
-                        {companySizeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="identity-upload-card">
-                      <div className="identity-upload-head">
-                        <div>
-                          <span className="identity-upload-label-text">Profile picture</span>
-                          <strong>{formData.profilePicture ? formData.profilePicture.name : 'PNG, JPG, or WEBP'}</strong>
-                        </div>
-                        <label className="identity-file-button" htmlFor="recruiter-picture">
-                          <FaCamera /> Upload image
-                          <input
-                            id="recruiter-picture"
-                            type="file"
-                            name="profilePicture"
-                            accept="image/png,image/jpeg,image/webp"
-                            onChange={handleChange}
-                          />
-                        </label>
-                      </div>
-                      <p>Shown as the recruiter identity across recruiter and candidate-facing surfaces.</p>
-                    </div>
-                  </div>
-
-                  <div className="identity-form-grid">
-                    <div className="identity-form-field">
-                      <label htmlFor="recruiter-industry">Industry</label>
-                      <input
-                        id="recruiter-industry"
-                        name="industry"
-                        value={formData.industry}
-                        onChange={handleChange}
-                        placeholder="Technology"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="identity-form-field identity-form-field-wide">
-                    <label htmlFor="recruiter-bio">Recruiter / company summary</label>
-                    <textarea
-                      id="recruiter-bio"
-                      name="bio"
-                      value={formData.bio}
-                      onChange={handleChange}
-                      placeholder="Summarize what kind of teams you hire for, what candidates can expect, and how your company tends to operate."
-                    />
-                  </div>
-                </section>
-
-                <div className="identity-savebar">
-                  <p>
-                    This profile is the recruiter source of truth for candidate-facing job and interview context.
-                  </p>
-                  <button type="submit" className="identity-save-button" disabled={saving}>
-                    {saving ? <><FaSpinner className="identity-inline-spin" /> Saving...</> : <><FaSave /> Save recruiter profile</>}
-                  </button>
-                </div>
-
-                {success && (
-                  <div className="identity-feedback success">
-                    <FaCheckCircle /> {success}
-                  </div>
-                )}
-                {error && (
-                  <div className="identity-feedback error">
-                    <FaUsers /> {error}
-                  </div>
-                )}
-              </form>
-            </article>
-          </main>
-        </section>
+              {success && <div className="pf-feedback success"><FaCheckCircle /> {success}</div>}
+              {error && <div className="pf-feedback error"><FaExclamationTriangle /> {error}</div>}
+            </form>
+          </div>
+        </main>
       </div>
     </div>
   );

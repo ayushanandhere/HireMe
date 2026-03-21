@@ -10,6 +10,8 @@ const {
   getApplicationStageCounts,
   serializeApplication
 } = require('../utils/applicationStages');
+
+const hasPopulatedJob = (application) => Boolean(application?.job?._id || application?.job);
 const {
   isCandidateProfileComplete,
   needsCandidateProfileCompletion,
@@ -334,8 +336,10 @@ const getCandidateDashboardSummary = async (req, res) => {
         .limit(12)
     ]);
 
+    const visibleApplications = applications.filter(hasPopulatedJob);
+
     const stageCounts = getApplicationStageCounts();
-    applications.forEach((application) => {
+    visibleApplications.forEach((application) => {
       if (stageCounts[application.stage] !== undefined) {
         stageCounts[application.stage] += 1;
       }
@@ -347,7 +351,7 @@ const getCandidateDashboardSummary = async (req, res) => {
       .slice(0, 5);
 
     const candidateSkillSet = getCandidateSkillSet(candidate);
-    const appliedJobIds = new Set(applications.map((application) => String(application.job?._id)));
+    const appliedJobIds = new Set(visibleApplications.map((application) => String(application.job?._id)));
     const recommendedJobs = publishedJobs
       .filter((job) => !appliedJobIds.has(String(job._id)))
       .map((job) => ({
@@ -364,9 +368,9 @@ const getCandidateDashboardSummary = async (req, res) => {
           ...buildCandidatePayload(candidate)
         },
         applicationSummary: {
-          total: applications.length,
+          total: visibleApplications.length,
           stageCounts,
-          recent: applications.slice(0, 4).map(serializeApplication)
+          recent: visibleApplications.slice(0, 4).map(serializeApplication)
         },
         interviewSummary: {
           total: interviews.length,

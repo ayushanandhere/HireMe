@@ -1,57 +1,67 @@
 import { useState, useEffect } from 'react';
-import { Button, Form, Row, Col, Card, Alert } from 'react-bootstrap';
 import { interviewService, authService } from '../services/api';
-import { FaStar, FaStarHalfAlt, FaRegStar, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FiEye, FiEyeOff, FiSend, FiStar } from 'react-icons/fi';
 import '../styles/InterviewFeedback.css';
+
+const CATEGORIES = [
+  { key: 'technical', label: 'Technical Skills' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'problemSolving', label: 'Problem Solving' },
+  { key: 'overall', label: 'Overall' }
+];
+
+const getRatingLabel = (s) => {
+  if (s === 0) return 'Not rated';
+  if (s <= 2) return 'Poor';
+  if (s <= 4) return 'Below average';
+  if (s <= 6) return 'Average';
+  if (s <= 8) return 'Good';
+  if (s <= 9) return 'Excellent';
+  return 'Outstanding';
+};
+
+const getTone = (s) => {
+  if (s === 0) return '';
+  if (s <= 3) return 'alert';
+  if (s <= 5) return 'review';
+  if (s <= 7) return 'active';
+  return 'positive';
+};
 
 const InterviewFeedback = ({ interviewId, readOnly = false, onFeedbackSubmitted }) => {
   const [feedback, setFeedback] = useState({
-    technical: 0,
-    communication: 0,
-    problemSolving: 0,
-    overall: 0,
-    comments: {
-      technical: '',
-      communication: '',
-      problemSolving: '',
-      overall: ''
-    },
+    technical: 0, communication: 0, problemSolving: 0, overall: 0,
+    comments: { technical: '', communication: '', problemSolving: '', overall: '' },
     isShared: false
   });
-  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [existingFeedback, setExistingFeedback] = useState(null);
   const [userRole, setUserRole] = useState('');
-  
+
   useEffect(() => {
-    // Get user role
-    const role = authService.getUserRole();
-    setUserRole(role);
-    
-    // Fetch existing feedback if available
+    setUserRole(authService.getUserRole());
+
     const fetchFeedback = async () => {
       try {
         setIsLoading(true);
-        const response = await interviewService.getFeedback(interviewId);
-        
-        if (response.success && response.data.feedback) {
-          setExistingFeedback(response.data.feedback);
-          
-          // Initialize form with existing data
+        const res = await interviewService.getFeedback(interviewId);
+        if (res.success && res.data.feedback) {
+          const fb = res.data.feedback;
+          setExistingFeedback(fb);
           setFeedback({
-            technical: response.data.feedback.technical.score || 0,
-            communication: response.data.feedback.communication.score || 0,
-            problemSolving: response.data.feedback.problemSolving.score || 0,
-            overall: response.data.feedback.overall.score || 0,
+            technical: fb.technical.score || 0,
+            communication: fb.communication.score || 0,
+            problemSolving: fb.problemSolving.score || 0,
+            overall: fb.overall.score || 0,
             comments: {
-              technical: response.data.feedback.technical.comments || '',
-              communication: response.data.feedback.communication.comments || '',
-              problemSolving: response.data.feedback.problemSolving.comments || '',
-              overall: response.data.feedback.overall.comments || ''
+              technical: fb.technical.comments || '',
+              communication: fb.communication.comments || '',
+              problemSolving: fb.problemSolving.comments || '',
+              overall: fb.overall.comments || ''
             },
-            isShared: response.data.feedback.isShared || false
+            isShared: fb.isShared || false
           });
         }
       } catch (err) {
@@ -62,48 +72,28 @@ const InterviewFeedback = ({ interviewId, readOnly = false, onFeedbackSubmitted 
         setIsLoading(false);
       }
     };
-    
-    if (interviewId) {
-      fetchFeedback();
-    }
+
+    if (interviewId) fetchFeedback();
   }, [interviewId]);
-  
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    if (['technical', 'communication', 'problemSolving', 'overall'].includes(name)) {
-      setFeedback(prev => ({
-        ...prev,
-        [name]: parseInt(value, 10)
-      }));
-    } else if (name.startsWith('comments-')) {
-      const commentType = name.replace('comments-', '');
-      setFeedback(prev => ({
-        ...prev,
-        comments: {
-          ...prev.comments,
-          [commentType]: value
-        }
-      }));
-    }
+
+  const handleScore = (key, val) => {
+    setFeedback((p) => ({ ...p, [key]: parseInt(val, 10) }));
   };
-  
+
+  const handleComment = (key, val) => {
+    setFeedback((p) => ({ ...p, comments: { ...p.comments, [key]: val } }));
+  };
+
   const handleVisibilityToggle = async () => {
     try {
       setIsLoading(true);
       setError('');
-      setSuccess('');
-      
-      const newVisibility = !feedback.isShared;
-      const response = await interviewService.updateFeedbackVisibility(interviewId, newVisibility);
-      
-      if (response.success) {
-        setFeedback(prev => ({
-          ...prev,
-          isShared: newVisibility
-        }));
-        
-        setSuccess(`Feedback is now ${newVisibility ? 'visible' : 'hidden'} to the candidate`);
+      const next = !feedback.isShared;
+      const res = await interviewService.updateFeedbackVisibility(interviewId, next);
+      if (res.success) {
+        setFeedback((p) => ({ ...p, isShared: next }));
+        setSuccess(`Feedback is now ${next ? 'visible' : 'hidden'} to the candidate`);
+        setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
       setError(err.message || 'Failed to update visibility');
@@ -111,36 +101,26 @@ const InterviewFeedback = ({ interviewId, readOnly = false, onFeedbackSubmitted 
       setIsLoading(false);
     }
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       setIsLoading(true);
       setError('');
       setSuccess('');
-      
-      // Prepare feedback data
-      const feedbackData = {
+      const res = await interviewService.submitFeedback(interviewId, {
         technical: feedback.technical,
         communication: feedback.communication,
         problemSolving: feedback.problemSolving,
         overall: feedback.overall,
         comments: feedback.comments,
         isShared: feedback.isShared
-      };
-      
-      // Submit feedback
-      const response = await interviewService.submitFeedback(interviewId, feedbackData);
-      
-      if (response.success) {
-        setSuccess('Feedback submitted successfully');
-        setExistingFeedback(response.data);
-        
-        // Call the callback if provided
-        if (onFeedbackSubmitted) {
-          onFeedbackSubmitted(response.data);
-        }
+      });
+      if (res.success) {
+        setSuccess('Feedback saved successfully');
+        setExistingFeedback(res.data);
+        setTimeout(() => setSuccess(''), 3000);
+        onFeedbackSubmitted?.(res.data);
       }
     } catch (err) {
       setError(err.message || 'Failed to submit feedback');
@@ -148,290 +128,139 @@ const InterviewFeedback = ({ interviewId, readOnly = false, onFeedbackSubmitted 
       setIsLoading(false);
     }
   };
-  
-  const getRatingLabel = (score) => {
-    if (score === 0) return 'Not rated';
-    if (score <= 2) return 'Poor';
-    if (score <= 4) return 'Below Average';
-    if (score <= 6) return 'Average';
-    if (score <= 8) return 'Good';
-    if (score <= 9) return 'Excellent';
-    return 'Outstanding';
-  };
-  
-  const renderStars = (score) => {
-    const stars = [];
-    const fullStars = Math.floor(score / 2);
-    const hasHalfStar = score % 2 !== 0;
-    
-    for (let i = 0; i < 5; i++) {
-      if (i < fullStars) {
-        stars.push(<FaStar key={i} className="text-warning" />);
-      } else if (i === fullStars && hasHalfStar) {
-        stars.push(<FaStarHalfAlt key={i} className="text-warning" />);
-      } else {
-        stars.push(<FaRegStar key={i} className="text-muted" />);
-      }
-    }
-    
-    return <div className="d-flex">{stars} <span className="ms-2">({score}/10)</span></div>;
-  };
-  
-  if (isLoading) {
-    return <div className="text-center my-4">Loading feedback data...</div>;
-  }
-  
-  // Read-only view for candidates
-  if (userRole === 'candidate' || readOnly) {
-    if (!existingFeedback) {
-      return (
-        <div className="feedback-form">
-          <div className="text-center p-4">
-            <p className="mb-0">No feedback available for this interview yet.</p>
-          </div>
-        </div>
-      );
-    }
-    
+
+  if (isLoading && !existingFeedback && !feedback.technical) {
     return (
-      <div className="feedback-display">
-        <h4>Interview Feedback</h4>
-        
-        <div className="overall-score">
-          <div className="overall-score-value">{existingFeedback.overall.score}</div>
-          <div className="overall-score-label">Overall Score</div>
-          {renderStars(existingFeedback.overall.score)}
-        </div>
-        
-        <Row className="mb-4">
-          <Col md={6} className="mb-4 mb-md-0">
-            <h5>Technical Skills</h5>
-            <div className="feedback-score">
-              <span className="feedback-score-label">Score:</span>
-              <span className="feedback-score-value">{existingFeedback.technical.score}</span>
-            </div>
-            {existingFeedback.technical.comments && (
-              <div className="feedback-comments">
-                {existingFeedback.technical.comments}
-              </div>
-            )}
-          </Col>
-          <Col md={6}>
-            <h5>Communication Skills</h5>
-            <div className="feedback-score">
-              <span className="feedback-score-label">Score:</span>
-              <span className="feedback-score-value">{existingFeedback.communication.score}</span>
-            </div>
-            {existingFeedback.communication.comments && (
-              <div className="feedback-comments">
-                {existingFeedback.communication.comments}
-              </div>
-            )}
-          </Col>
-        </Row>
-        
-        <Row>
-          <Col md={6} className="mb-4 mb-md-0">
-            <h5>Problem-Solving Skills</h5>
-            <div className="feedback-score">
-              <span className="feedback-score-label">Score:</span>
-              <span className="feedback-score-value">{existingFeedback.problemSolving.score}</span>
-            </div>
-            {existingFeedback.problemSolving.comments && (
-              <div className="feedback-comments">
-                {existingFeedback.problemSolving.comments}
-              </div>
-            )}
-          </Col>
-          <Col md={6}>
-            <h5>Overall Assessment</h5>
-            {existingFeedback.overall.comments && (
-              <div className="feedback-comments">
-                {existingFeedback.overall.comments}
-              </div>
-            )}
-          </Col>
-        </Row>
+      <div className="ifb-loading">
+        <div className="ifb-spinner" />
+        <p>Loading feedback…</p>
       </div>
     );
   }
-  
-  // Form view for recruiters
-  return (
-    <div className="feedback-form">
-      <h4>Provide Interview Feedback</h4>
-      
-      {existingFeedback && (
-        <div className="d-flex justify-content-end mb-3">
-          <Button 
-            variant={feedback.isShared ? "primary" : "outline-secondary"} 
-            size="sm"
-            onClick={handleVisibilityToggle}
-            disabled={isLoading}
-            className="visibility-toggle"
-          >
-            {feedback.isShared ? <><FaEye className="me-2" /> Visible to Candidate</> : <><FaEyeSlash className="me-2" /> Hidden from Candidate</>}
-          </Button>
+
+  /* ── Read-only view (candidate) ── */
+  if (userRole === 'candidate' || readOnly) {
+    if (!existingFeedback) {
+      return (
+        <div className="ifb-empty surface-card">
+          <FiStar />
+          <p>No feedback available for this interview yet.</p>
         </div>
+      );
+    }
+
+    return (
+      <div className="ifb-readonly">
+        <div className="ifb-overall-ring">
+          <div className={`ifb-ring ${getTone(existingFeedback.overall.score)}`}>
+            <span className="ifb-ring-val">{existingFeedback.overall.score}</span>
+            <span className="ifb-ring-of">/10</span>
+          </div>
+          <span className="ifb-ring-label">Overall Score</span>
+        </div>
+
+        <div className="ifb-ro-grid">
+          {CATEGORIES.filter(c => c.key !== 'overall').map(({ key, label }) => (
+            <div key={key} className="ifb-ro-card surface-card">
+              <div className="ifb-ro-head">
+                <span className="ifb-ro-title">{label}</span>
+                <span className={`ifb-ro-badge ${getTone(existingFeedback[key].score)}`}>
+                  {existingFeedback[key].score}/10
+                </span>
+              </div>
+              {existingFeedback[key].comments && (
+                <p className="ifb-ro-comment">{existingFeedback[key].comments}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {existingFeedback.overall.comments && (
+          <div className="ifb-ro-overall surface-card">
+            <span className="ifb-ro-title">Overall Comments</span>
+            <p className="ifb-ro-comment">{existingFeedback.overall.comments}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ── Form view (recruiter) ── */
+  return (
+    <form className="ifb-form" onSubmit={handleSubmit}>
+      {error && <div className="ifb-alert alert">{error}</div>}
+      {success && <div className="ifb-alert positive">{success}</div>}
+
+      {existingFeedback && (
+        <button
+          type="button"
+          className={`ifb-visibility ${feedback.isShared ? 'shared' : ''}`}
+          onClick={handleVisibilityToggle}
+          disabled={isLoading}
+        >
+          {feedback.isShared ? <FiEye /> : <FiEyeOff />}
+          {feedback.isShared ? 'Visible to candidate' : 'Hidden from candidate'}
+        </button>
       )}
-      
-      {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">{success}</Alert>}
-      
-      <Form onSubmit={handleSubmit}>
-        <Row className="mb-4">
-          <Col md={6} className="mb-4 mb-md-0">
-            <div className="form-group">
-              <h4>Technical Skills</h4>
-              <div className="score-input">
-                <label>Score:</label>
-                <div className="score-slider">
-                  <input
-                    type="range"
-                    name="technical"
-                    min="0"
-                    max="10"
-                    value={feedback.technical}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="score-display">{feedback.technical}</div>
-              </div>
-              <div>{getRatingLabel(feedback.technical)}</div>
-              <textarea
-                name="comments-technical"
-                placeholder="Comments on technical skills (optional)"
-                value={feedback.comments.technical}
-                onChange={handleInputChange}
-                className="form-control mt-3"
-                disabled={isLoading}
-                rows={3}
-              />
+
+      <div className="ifb-grid">
+        {CATEGORIES.map(({ key, label }) => (
+          <div key={key} className="ifb-card surface-card">
+            <div className="ifb-card-head">
+              <h3>{label}</h3>
+              <span className={`ifb-score-badge ${getTone(feedback[key])}`}>
+                {feedback[key]}
+              </span>
             </div>
-          </Col>
-          <Col md={6}>
-            <div className="form-group">
-              <h4>Communication Skills</h4>
-              <div className="score-input">
-                <label>Score:</label>
-                <div className="score-slider">
-                  <input
-                    type="range"
-                    name="communication"
-                    min="0"
-                    max="10"
-                    value={feedback.communication}
-                    onChange={handleInputChange}
+
+            <div className="ifb-score-row">
+              <div className="ifb-score-dots">
+                {[...Array(11)].map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`ifb-dot ${feedback[key] === i ? 'selected' : ''} ${i > 0 && i <= feedback[key] ? 'filled' : ''} ${getTone(i)}`}
+                    onClick={() => handleScore(key, i)}
                     disabled={isLoading}
-                  />
-                </div>
-                <div className="score-display">{feedback.communication}</div>
+                  >
+                    {i}
+                  </button>
+                ))}
               </div>
-              <div>{getRatingLabel(feedback.communication)}</div>
-              <textarea
-                name="comments-communication"
-                placeholder="Comments on communication skills (optional)"
-                value={feedback.comments.communication}
-                onChange={handleInputChange}
-                className="form-control mt-3"
-                disabled={isLoading}
-                rows={3}
-              />
+              <span className={`ifb-rating-label ${getTone(feedback[key])}`}>
+                {getRatingLabel(feedback[key])}
+              </span>
             </div>
-          </Col>
-        </Row>
-        
-        <Row className="mb-4">
-          <Col md={6} className="mb-4 mb-md-0">
-            <div className="form-group">
-              <h4>Problem-Solving Skills</h4>
-              <div className="score-input">
-                <label>Score:</label>
-                <div className="score-slider">
-                  <input
-                    type="range"
-                    name="problemSolving"
-                    min="0"
-                    max="10"
-                    value={feedback.problemSolving}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="score-display">{feedback.problemSolving}</div>
-              </div>
-              <div>{getRatingLabel(feedback.problemSolving)}</div>
-              <textarea
-                name="comments-problemSolving"
-                placeholder="Comments on problem-solving skills (optional)"
-                value={feedback.comments.problemSolving}
-                onChange={handleInputChange}
-                className="form-control mt-3"
-                disabled={isLoading}
-                rows={3}
-              />
-            </div>
-          </Col>
-          <Col md={6}>
-            <div className="form-group">
-              <h4>Overall Assessment</h4>
-              <div className="score-input">
-                <label>Score:</label>
-                <div className="score-slider">
-                  <input
-                    type="range"
-                    name="overall"
-                    min="0"
-                    max="10"
-                    value={feedback.overall}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="score-display">{feedback.overall}</div>
-              </div>
-              <div>{getRatingLabel(feedback.overall)}</div>
-              <textarea
-                name="comments-overall"
-                placeholder="Overall comments (optional)"
-                value={feedback.comments.overall}
-                onChange={handleInputChange}
-                className="form-control mt-3"
-                disabled={isLoading}
-                rows={3}
-              />
-            </div>
-          </Col>
-        </Row>
-        
-        <div className="form-check">
+
+            <textarea
+              placeholder={`Comments on ${label.toLowerCase()} (optional)`}
+              value={feedback.comments[key]}
+              onChange={(e) => handleComment(key, e.target.value)}
+              disabled={isLoading}
+              rows={3}
+            />
+          </div>
+        ))}
+      </div>
+
+      <footer className="ifb-footer">
+        <label className="ifb-share">
           <input
-            className="form-check-input"
             type="checkbox"
-            id="feedbackVisibility"
             checked={feedback.isShared}
-            onChange={() => setFeedback(prev => ({ ...prev, isShared: !prev.isShared }))}
+            onChange={() => setFeedback((p) => ({ ...p, isShared: !p.isShared }))}
             disabled={isLoading}
           />
-          <label className="form-check-label" htmlFor="feedbackVisibility">
-            Share feedback with candidate
-          </label>
-        </div>
-        
-        <div className="d-flex justify-content-end mt-4">
-          <Button 
-            variant="primary" 
-            type="submit" 
-            disabled={isLoading}
-            className="btn-primary"
-          >
-            {isLoading ? 'Submitting...' : (existingFeedback ? 'Update Feedback' : 'Submit Feedback')}
-          </Button>
-        </div>
-      </Form>
-    </div>
+          <span>Share feedback with candidate</span>
+        </label>
+
+        <button type="submit" className="ifb-submit" disabled={isLoading}>
+          <FiSend />
+          {isLoading ? 'Saving…' : existingFeedback ? 'Update Feedback' : 'Submit Feedback'}
+        </button>
+      </footer>
+    </form>
   );
 };
 
-export default InterviewFeedback; 
+export default InterviewFeedback;

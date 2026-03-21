@@ -30,7 +30,8 @@ const videoService = {
    */
   async getMeetingDetails(interviewId) {
     try {
-      const response = await api.get(`/video/${interviewId}/details`);
+      const baseUrl = window.location.origin;
+      const response = await api.get(`/video/${interviewId}/details?baseUrl=${encodeURIComponent(baseUrl)}`);
       return response.data;
     } catch (error) {
       console.error('Error getting meeting details:', error);
